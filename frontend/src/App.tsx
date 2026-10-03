@@ -3,6 +3,7 @@ import AppHeader from './components/AppHeader';
 import { ConnectionProvider } from './components/ConnectionProvider';
 import HomeScreen from './screens/Home/HomeScreen';
 import ConnectScreen from './screens/Connect/ConnectScreen';
+import ClusterOverviewScreen from './screens/ClusterOverview/ClusterOverviewScreen';
 import MappingLabScreen from './screens/MappingLab/MappingLabScreen';
 import WordListsScreen from './screens/WordLists/WordListsScreen';
 
@@ -15,6 +16,7 @@ export function AppRoutes() {
         <Routes>
           <Route path="/" element={<HomeScreen />} />
           <Route path="/connect" element={<ConnectScreen />} />
+          <Route path="/overview" element={<ClusterOverviewScreen />} />
           <Route path="/mapping-lab" element={<MappingLabScreen />} />
           <Route path="/word-lists" element={<WordListsScreen />} />
         </Routes>

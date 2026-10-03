@@ -1,16 +1,24 @@
 import { useState, type FormEvent } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useConnection } from '../../components/ConnectionProvider';
 import { ClusterError } from '../../opensearch/errors';
 import './connect.css';
 
 export default function ConnectScreen() {
-  const { state, facts, connect } = useConnection();
+  const { state, connect } = useConnection();
+  const navigate = useNavigate();
   const [url, setUrl] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<ClusterError | null>(null);
 
   const isWorking = state === 'connecting';
+
+  // Already connected (e.g. the user typed /connect again, or clicked the logo while
+  // connected) — go straight to the overview instead of showing the form again.
+  if (state === 'connected') {
+    return <Navigate to="/overview" replace />;
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -23,6 +31,8 @@ export default function ConnectScreen() {
     setError(null);
     try {
       await connect(details);
+      // R1.1: a successful connect goes straight to the cluster overview.
+      navigate('/overview');
     } catch (err) {
       setError(err instanceof ClusterError ? err : null);
     }
@@ -90,18 +100,6 @@ export default function ConnectScreen() {
               <li>Check the address and the network.</li>
             </ul>
           )}
-        </div>
-      )}
-
-      {state === 'connected' && facts && (
-        <div className="connect-success">
-          <p>
-            Connected to <strong>{facts.cluster_name}</strong> ({facts.distribution}{' '}
-            {facts.version})
-          </p>
-          <p>
-            {facts.number_of_nodes} node(s), health: {facts.status}
-          </p>
         </div>
       )}
     </div>

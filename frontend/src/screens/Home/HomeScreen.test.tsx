@@ -57,7 +57,7 @@ describe('Home page', () => {
     expect(onConnectPage()).toBeInTheDocument();
   });
 
-  it('R5.3 each card shows a name and one sentence; only Connect is a link', () => {
+  it('R5.3 each card shows a name and one sentence; only built screens are links', () => {
     renderAt('/');
     const region = screen.getByRole('region', { name: 'Five screens, one job' });
 
@@ -67,10 +67,12 @@ describe('Home page', () => {
     }
 
     const links = within(region).getAllByRole('link');
-    expect(links).toHaveLength(1);
-    expect(links[0]).toHaveTextContent('Connect');
-    expect(within(region).getAllByText('Coming soon')).toHaveLength(4);
-    for (const name of ['Cluster overview', 'Token playground', 'Query lab', 'Load monitor']) {
+    expect(links.map((l) => l.textContent)).toEqual(
+      expect.arrayContaining([expect.stringContaining('Connect'), expect.stringContaining('Cluster overview')]),
+    );
+    expect(links).toHaveLength(2);
+    expect(within(region).getAllByText('Coming soon')).toHaveLength(3);
+    for (const name of ['Token playground', 'Query lab', 'Load monitor']) {
       expect(within(region).queryByRole('link', { name: new RegExp(name) })).toBeNull();
     }
   });

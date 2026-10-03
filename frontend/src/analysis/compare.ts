@@ -125,7 +125,7 @@ const PLAIN: Record<string, string> = {
   apostrophe: 'apostrophes cut', reverse: 'written backwards', truncate: 'long tokens cut',
 };
 
-function plainStep(s: Step, isTokenizer: boolean): string {
+export function plainStep(s: Step, isTokenizer: boolean): string {
   if (s.def.type === 'stemmer' && s.def.language === 'possessive_english') return "'s removed";
   if (s.def.type === 'lowercase') return isTokenizer ? 'cut at non-letters, small letters' : 'small letters';
   return PLAIN[s.def.type] ?? s.def.type;

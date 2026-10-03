@@ -1,0 +1,75 @@
+import { plainStep } from '../../analysis/compare';
+import type { Chain, Field } from '../../analysis/types';
+
+interface Props {
+  fields: Field[];
+  analyzers: Record<string, Chain>;
+  onTryField: (field: Field, chain: Chain) => void;
+}
+
+// R4.5: listFields() never throws, so a field whose raw data had no usable type or
+// properties comes back as kind 'other' with type 'object' — that combination is this
+// screen's signal that the field could not be read.
+function isUnreadable(field: Field): boolean {
+  return field.kind === 'other' && field.type === 'object';
+}
+
+// R4.2: always names the field by its full path, not just its last segment, so a
+// nested field (e.g. "address.city") is never confused with a top-level one of the
+// same name.
+function sentence(field: Field): string {
+  if (field.kind === 'object') return `${field.path} groups the fields below it.`;
+  if (field.kind === 'text') return `${field.path} is text, analyzed with ${field.indexAnalyzer}.`;
+  if (field.kind === 'keyword') {
+    return field.normalizer
+      ? `${field.path} is keyword (exact values), normalized with ${field.normalizer}.`
+      : `${field.path} is keyword (exact values).`;
+  }
+  return `${field.path} is ${field.type}.`;
+}
+
+function pillsFor(chain: Chain): string[] {
+  return [
+    ...chain.charFilters.map((s) => plainStep(s, false)),
+    plainStep(chain.tokenizer, true),
+    ...chain.filters.map((s) => plainStep(s, false)),
+  ];
+}
+
+export default function FieldTree({ fields, analyzers, onTryField }: Props) {
+  return (
+    <ul className="field-tree">
+      {fields.map((field) => {
+        const depth = field.path.split('.').length - 1;
+        const chain = field.kind === 'text' && field.indexAnalyzer ? analyzers[field.indexAnalyzer] : undefined;
+        return (
+          <li key={field.path} className="field-row" style={{ marginLeft: `${depth * 24}px` }}>
+            {isUnreadable(field) ? (
+              <p className="field-unreadable">This field could not be read.</p>
+            ) : (
+              <div className="field-row-inner">
+                <p className="field-sentence">{sentence(field)}</p>
+                <div className="field-row-bottom">
+                  {chain && (
+                    <div className="field-pills">
+                      {pillsFor(chain).map((pill, i) => (
+                        <span key={i} className="pill">
+                          {pill}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {field.kind === 'text' && chain && (
+                    <button type="button" className="btn ghost small try-it-button" onClick={() => onTryField(field, chain)}>
+                      Try it
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}

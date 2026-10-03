@@ -32,7 +32,7 @@ export const SCREENS: ScreenCard[] = [
     name: 'Cluster overview',
     text: 'Indexes, mappings, templates, nodes and health.',
     to: '/overview',
-    ready: false,
+    ready: true,
     icon: (
       <>
         <rect x="5" y="6" width="14" height="14" rx="3" fill="var(--green-bg)" stroke="var(--green)" {...stroke} />

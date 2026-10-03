@@ -1,0 +1,322 @@
+.overview-screen {
+  padding: 48px 24px;
+}
+
+.overview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.overview-error {
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.overview-empty,
+.overview-loading {
+  color: var(--muted);
+}
+
+.index-search {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 360px;
+}
+
+.index-search label {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.index-search input {
+  font-family: var(--sans);
+  font-size: 1rem;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.search-results {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.search-results button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: none;
+  cursor: pointer;
+  font-family: var(--mono);
+}
+
+.search-results button:hover {
+  background: var(--board);
+}
+
+.search-no-match {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.chart-head {
+  margin-bottom: 12px;
+}
+
+.chart-head label {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.chart-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chart-bar {
+  display: grid;
+  grid-template-columns: 160px 1fr 90px 90px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--mono);
+  text-align: left;
+}
+
+.bar-label {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-track {
+  background: var(--board);
+  border-radius: 4px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--blue);
+}
+
+.bar-health {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.bar-health i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.chart-counts {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.index-detail {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.detail-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.detail-tabs button {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.detail-tabs button[aria-selected='true'] {
+  background: var(--ink);
+  color: var(--board);
+  border-color: var(--ink);
+}
+
+.detail-loading,
+.detail-coming-soon {
+  color: var(--muted);
+}
+
+.detail-forbidden {
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.field-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field-row {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+
+.field-sentence {
+  margin: 0 0 6px;
+}
+
+.field-unreadable {
+  margin: 0;
+  color: var(--red);
+}
+
+.field-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.pill {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--blue-bg);
+  color: var(--blue);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.try-it-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.try-it-box input {
+  font-family: var(--sans);
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.try-it-error {
+  color: var(--red);
+  margin: 0;
+}
+
+.try-it-tokens {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.try-it-tokens .token {
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--yellow-bg);
+  color: var(--yellow);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+.shard-settings {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: flex;
+  gap: 20px;
+  font-weight: 700;
+}
+
+.shard-nodes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.shard-node {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.node-name {
+  margin: 0 0 8px;
+  font-weight: 700;
+  font-family: var(--mono);
+}
+
+.node-boxes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.shard-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.shard-box.assigned.primary {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+
+.shard-box.assigned.replica {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.shard-box.unassigned {
+  background: var(--red-bg);
+  color: var(--red);
+}

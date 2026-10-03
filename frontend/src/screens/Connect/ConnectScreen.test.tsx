@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ConnectionProvider } from '../../components/ConnectionProvider';
 import ConnectScreen from './ConnectScreen';
@@ -17,10 +18,18 @@ function jsonResponse(status: number, body: unknown) {
   });
 }
 
+// A stand-in for the real overview screen (its own tests cover that screen), so this
+// file can check that a successful connect navigates there (R1.1) without pulling in
+// ClusterOverviewScreen's own cluster calls.
 function renderScreen() {
   return render(
     <ConnectionProvider>
-      <ConnectScreen />
+      <MemoryRouter initialEntries={['/connect']}>
+        <Routes>
+          <Route path="/connect" element={<ConnectScreen />} />
+          <Route path="/overview" element={<p>Cluster overview page</p>} />
+        </Routes>
+      </MemoryRouter>
     </ConnectionProvider>,
   );
 }
@@ -64,7 +73,7 @@ describe('ConnectScreen', () => {
     resolveFetch(jsonResponse(200, ROOT_BODY));
   });
 
-  it('R1.1 success: shows the cluster name, version, node count and health', async () => {
+  it('R1.1 success: navigates to the cluster overview screen', async () => {
     vi.stubGlobal(
       'fetch',
       vi
@@ -76,10 +85,7 @@ describe('ConnectScreen', () => {
     fillForm('https://localhost:9200', 'admin', 'secret');
     submit();
 
-    expect(await screen.findByText(/docker-cluster/)).toBeInTheDocument();
-    expect(screen.getByText(/opensearch/)).toBeInTheDocument();
-    expect(screen.getByText(/2\.19\.0/)).toBeInTheDocument();
-    expect(screen.getByText(/1 node\(s\), health: green/)).toBeInTheDocument();
+    expect(await screen.findByText('Cluster overview page')).toBeInTheDocument();
   });
 
   it('R1.8 connects with no username or password, for a cluster with no login', async () => {
@@ -94,7 +100,7 @@ describe('ConnectScreen', () => {
     fillForm('https://localhost:9200', '', '');
     submit();
 
-    expect(await screen.findByText(/docker-cluster/)).toBeInTheDocument();
+    expect(await screen.findByText('Cluster overview page')).toBeInTheDocument();
     const [, init] = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(init.headers.Authorization).toBeUndefined();
   });
