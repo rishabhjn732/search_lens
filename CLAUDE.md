@@ -29,30 +29,27 @@ Skills for this flow: `/spec-new`, `/spec-requirements`, `/spec-design`, `/spec-
 
 ## Commands
 
-These work after tasks 1 and 2 of spec 001 are done.
+Run `cd frontend && npm install` once first. There is no backend (see `docs/steering/tech.md`).
 
-- Backend setup (once): `cd backend && uv sync`
-- Backend tests: `cd backend && uv run pytest`
-- One backend test: `cd backend && uv run pytest tests/test_guard.py::test_name`
-- Backend run: `cd backend && uv run uvicorn app.main:app --reload --port 8000`
-- Frontend tests: `cd frontend && npm test`
-- One frontend test file: `cd frontend && npx vitest run src/screens/Connect/ConnectScreen.test.tsx`
-- Frontend run: `cd frontend && npm run dev`
+- Tests: `cd frontend && npm test`
+- One test file: `cd frontend && npx vitest run src/screens/Connect/ConnectScreen.test.tsx`
+- Run: `cd frontend && npm run dev`, then open http://localhost:5173
+- Type check and build: `cd frontend && npm run build`
 - Local practice cluster: `docker compose -f dev/docker-compose.yml up -d`, then `bash dev/seed.sh`
   to load the `products` index and the `product_search` template. Details in `dev/README.md`.
 
 ## Big picture
 
-This is planned in spec 001 (`design.md`, still `draft`). Check that file before you rely on it.
+This is planned in spec 001 (`design.md`). Check that file and its `Status:` before you rely on it.
 
-- Browser → backend (`/api/...`) → OpenSearch. In development Vite forwards `/api` to port 8000.
-- `POST /api/connection` checks the cluster, keeps the connection in backend memory under a
-  random session id, and sets an `HttpOnly` cookie `sl_session`. Later calls send only the cookie.
-- Screens reach the cluster through `ANY /api/os/{path}`. A guard (`app/opensearch/guard.py`)
-  checks method and path against the allow-list in `.claude/skills/opensearch-api/reference.md`
-  before anything leaves the backend. Refused calls get the `read_only` error.
-- Backend responses: `{ "data": ... }` or `{ "error": { "code", "message" } }`.
-  Error codes and exact messages come from the spec, not from the code.
+- Browser-only: the browser calls OpenSearch directly. No backend (user decision, 2026-10-03).
+  Each cluster must allow the page's address in its CORS settings.
+- All cluster calls go through `frontend/src/opensearch/client.ts`. It asks the read-only guard
+  (`guard.ts`, allow-list in `.claude/skills/opensearch-api/reference.md`) first; refused calls are
+  never sent and get the `read_only` error.
+- The password lives only in page memory (the login header is kept in a closure). Never in
+  browser storage, the console, or error messages. A reload means connecting again.
+- Errors are `ClusterError { code, message }`. Codes and exact messages come from the spec.
 - Screens draw from the raw OpenSearch response shape. `prototypes/` is a visual reference only,
   not production code.
 - Use the `opensearch-api` skill for which OpenSearch APIs exist and which ones the guard allows.
@@ -94,5 +91,14 @@ Keep each entry short; details belong in `specs/BACKLOG.md` or `specs/<feature>/
   3. `/spec-implement` task 1 (backend), task 2 (React app), then the home page task.
   The Word lists tab (`a-word-lists.html`) gets its own spec: `/spec-new custom-word-lists`.
   Git fixed later in the session: `search-lens` has its own repository on branch `main`.
-- Later in the same session: step 1 done. Spec 001 now has R5 (home page), design for `/` and
+- Later: task 1 (backend) and task 2 (React skeleton) built; repo pushed to
+  `git@github.com:rishabhjn732/search_lens.git`. Then the user chose **browser-only, no backend**.
+  Steering docs, rules and spec 001 were rewritten; spec 001 is back to `draft` for approval.
+  User approved; task 2 (backend removed) and task 3 (home page in React) are done.
+  Then spec 006 (custom word lists) was written from the prototypes, approved, and tasks 1–4 built:
+  `src/wordlists/` (rules, store on localStorage), `/word-lists` page, home page section.
+  62 tests pass. Next: user does 006 task 5 (manual check in a browser); then
+  `/spec-implement 001` → task 4 (read-only guard). The user must delete the leftover
+  `backend/` folder by hand (`rm -rf` is denied in `.claude/settings.json`).
+- Earlier in the same session: step 1 done. Spec 001 now has R5 (home page), design for `/` and
   `/connect`, and task 3 "Home page" (old tasks 3 to 10 are now 4 to 11). Still `draft`.

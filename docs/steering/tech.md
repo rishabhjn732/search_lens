@@ -1,25 +1,34 @@
 # Tech
 
-This is the default stack. To change it, edit this file before the design of spec 001 is approved,
-and update `.claude/rules/backend.md` and `.claude/rules/frontend.md` to match.
+This is the stack. To change it, edit this file first, then the spec, then the code,
+and update `.claude/rules/frontend.md` to match.
 
 | Part | Choice | Reason |
 |---|---|---|
-| Backend | Python 3.11+, FastAPI, httpx | Small, async, easy to test with a fake cluster |
-| Backend tests | pytest | Standard for Python |
-| Frontend | React, TypeScript, Vite | Common, fast to start |
+| App | React, TypeScript, Vite, runs only in the browser | Common, fast to start, no server to run |
 | Drawing | SVG and CSS, D3 only where a layout is needed | Full control over animation |
-| Frontend tests | Vitest, React Testing Library | Works with Vite |
+| Tests | Vitest, React Testing Library, a fake `fetch` | Works with Vite, never needs a real cluster |
 | Practice cluster | OpenSearch in Docker, one node | Safe place to try things |
 
-## Why a backend is needed
+## Browser-only: the browser calls OpenSearch directly
 
-The browser does not call OpenSearch directly, for two reasons:
+Decided by the user on 2026-10-03. An earlier plan had a small Python backend between the
+browser and the cluster. It was removed to keep the tool simple to run.
 
-1. The password would be visible in the browser.
-2. OpenSearch usually blocks calls that come from a web page on another address.
+What this means:
 
-So the browser calls the backend, and the backend calls OpenSearch.
+1. **CORS.** Browsers block a web page from calling another address unless that address allows it.
+   Each cluster must allow calls from the address Search Lens runs on
+   (`http.cors.enabled`, `http.cors.allow-origin`, `http.cors.allow-headers: Authorization,Content-Type`).
+   The practice cluster in `dev/` is set up for this.
+2. **Certificates.** A cluster with a self-signed certificate must be trusted by the browser first:
+   open the cluster URL in a new tab once and accept it.
+3. **Password.** The password is kept in page memory while the tab is open, and sent with every call.
+   It is never written to browser storage. Anyone with the browser's developer tools on that
+   computer can see it, so use Search Lens on your own computer.
+4. **Read-only.** The read-only guard runs in the browser before each call. It stops mistakes in the
+   tool, but a person who edits the page code could skip it. The real protection is to connect
+   with a cluster user that can only read.
 
 ## Authentication
 

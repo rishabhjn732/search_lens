@@ -1,0 +1,4 @@
+# bad synonyms
+tv =>
+couch,,sofa
+sofa

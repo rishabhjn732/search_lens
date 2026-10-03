@@ -9,7 +9,7 @@ Ideas that do not have a spec yet. Use `/spec-new <name>` to start one.
   dictionary, and the Token playground and Query lab use them during analysis. Read-only idea:
   send the lists inline in `_analyze` (`keyword_marker`, `synonym` filters); never store them on
   the cluster. Open question: Hunspell only reads dictionaries from the node's disk, so either
-  pick one already on the cluster, or stem in the backend (not exact OpenSearch behaviour).
+  pick one already on the cluster, or stem in the browser (not exact OpenSearch behaviour).
   Visual reference: the "Bring your own word lists" section in `prototypes/home/a-clean-lab.html`.
   A fourth list type, **entities** (the user's company has an `entity` file): a multi-word phrase
   such as `ai supplychain` is kept as one token and matches only as the exact phrase.

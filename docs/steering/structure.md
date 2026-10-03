@@ -9,10 +9,8 @@ search-lens/
   specs/               one folder per feature
   prototypes/          visual experiments, not production code
   dev/                 local practice cluster and sample data
-  backend/             created by spec 001, task 1
-  frontend/            created by spec 001, task 2
+  frontend/            the app, created by spec 001
 ```
 
-`backend/` layout: `app/main.py`, `app/routes/`, `app/opensearch/`, `app/models.py`, `tests/`.
-
-`frontend/` layout: `src/screens/<Screen>/`, `src/components/`, `src/api/client.ts`.
+`frontend/` layout: `src/screens/<Screen>/`, `src/components/`, `src/opensearch/` (the only code that
+calls the cluster: `client.ts`, `guard.ts`, `errors.ts`), `src/styles/`.

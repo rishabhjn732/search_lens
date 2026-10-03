@@ -16,7 +16,7 @@ You are given a spec folder and a task number. Do this:
    - no write call to the cluster,
    - no password in logs, errors, or storage,
    - no real cluster in tests,
-   - all backend calls from the UI go through the API client.
+   - all cluster calls go through `src/opensearch/client.ts` and pass the read-only guard first.
 5. Look for code that the task did not ask for. Extra features are a finding.
 
 Give your answer as a list sorted by importance: "must fix", "should fix", "small".

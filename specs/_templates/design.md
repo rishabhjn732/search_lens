@@ -17,9 +17,9 @@ Example response (shortened):
 {}
 ```
 
-## Backend
+## Cluster code (`src/opensearch/`)
 
-| Route | Request | Success response | Errors |
+| Function | What it calls | What it returns | Errors |
 |---|---|---|---|
 
 ## Frontend

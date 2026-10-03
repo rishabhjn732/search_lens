@@ -4,17 +4,21 @@ Status: approved
 
 ## Overview
 
-The connect screen sends the URL, username, password and the "skip certificate check" choice to the backend.
-The backend makes two calls to the cluster: one for the version and name, one for the health.
-If both work, the backend keeps the connection in memory under a random session id and gives
-that id to the browser in a cookie that scripts cannot read. The browser forgets the password.
+Search Lens runs only in the browser. There is no backend (decided 2026-10-03, see
+`docs/steering/tech.md`).
 
-Every later request from the browser carries the cookie. The backend looks up the connection
-and forwards the call to the cluster through a guard that only lets read calls pass.
+The connect screen gives the URL, username and password to `ConnectionProvider`. It creates a
+cluster client and makes two calls straight from the browser to the cluster: one for the version
+and name, one for the health. If both work, the client stays in page memory and every screen uses
+it. Nothing is written to browser storage, so a reload means connecting again (R2.4).
 
-Real-life picture: you show your ID once at the building entrance and get a visitor card.
-After that you only show the card. The guard at each door checks the card and only opens
-doors that visitors may use.
+Every call goes through one function, `request(method, path, body)`. It first asks the read-only
+guard. A refused call is never sent (R3.1). An allowed call gets the login header and a 5 second
+time limit.
+
+Real-life picture: you carry your own key to the building. Search Lens has a rule on its own hand:
+it only turns door handles marked "read". Someone could break that rule by changing the tool,
+so the safest key is one that only opens "read" doors anyway: a read-only cluster user (R3.3).
 
 ## OpenSearch calls
 
@@ -34,57 +38,64 @@ Example responses (shortened):
 { "cluster_name": "docker-cluster", "status": "green", "number_of_nodes": 1 }
 ```
 
-## Backend
+The cluster must allow calls from the page's address (CORS). The browser first sends an `OPTIONS`
+"preflight" call, because the request has an `Authorization` header. The practice cluster in
+`dev/docker-compose.yml` is set up for `http://localhost:5173` (task 9).
 
-| Route | Request | Success response | Errors |
-|---|---|---|---|
-| `POST /api/connection` | `{ url, username, password, verify_tls }` | 200 `{ data: { cluster_name, version, distribution, status, number_of_nodes } }` and a session cookie | `invalid_url` 422, `auth_failed` 401, `forbidden` 403, `unreachable` 502, `timeout` 504, `tls_untrusted` 502 |
-| `GET /api/connection` | cookie | 200 `{ data: { connected, url, username, cluster_name, status } }` | `connection_lost` 502 |
-| `DELETE /api/connection` | cookie | 204 | none |
-| `ANY /api/os/{path}` | cookie, any body | the cluster's answer, unchanged | `not_connected` 409, `read_only` 403, plus the errors above |
+## Cluster code (`src/opensearch/`)
 
-Error bodies have the shape `{ "error": { "code": "...", "message": "..." } }`.
-The `message` is the exact sentence from the requirements.
+This folder is the only code that calls the cluster. Components never call `fetch`.
 
-### Connection store
-
-- A dictionary in memory: session id to connection.
-- A connection holds the URL, username, password, `verify_tls` and one `httpx.AsyncClient` with a 5 second timeout.
-- The session id is 32 random bytes from `secrets.token_urlsafe`.
-- The cookie is named `sl_session`, with `HttpOnly` and `SameSite=Strict`.
-- The connection's text form (`__repr__`) hides the password, so it cannot leak through a log line.
-- Request bodies are never logged.
-
-### Mapping cluster problems to errors
-
-| What happens | Error code |
+| File | Job |
 |---|---|
-| URL does not start with `http://` or `https://`, or has no host | `invalid_url` |
-| Cluster answers 401 | `auth_failed` |
-| Cluster answers 403 | `forbidden` |
-| Name cannot be resolved, or connection refused | `unreachable` |
-| No answer within 5 seconds | `timeout` |
-| Certificate check fails and `verify_tls` is true | `tls_untrusted` |
+| `client.ts` | `createClusterClient({ url, username, password })` returns `request(method, path, body?)` and `connect()`. `connect()` makes the two calls above and returns `{ cluster_name, version, distribution, status, number_of_nodes }`. |
+| `guard.ts` | `isAllowed(method, path)`, from `.claude/skills/opensearch-api/reference.md`, section "Read-only guard". |
+| `errors.ts` | `ClusterError` with `code` and `message`, and one function that builds each exact message. |
+
+### How the password is kept
+
+- `createClusterClient` turns the username and password into the `Authorization: Basic ...` header
+  once and keeps it in a closure. The returned object has no `password` field, so it cannot show up
+  when the object is logged or turned into JSON.
+- The connect form's password field is cleared as soon as Connect is chosen.
+- Calls use `credentials: "omit"` and send the header only to URLs that start with the URL the user
+  entered (R2.3). `request` takes a path, not a full URL, so it cannot be pointed elsewhere.
+- Nothing is written to `localStorage`, `sessionStorage`, cookies or IndexedDB, and nothing is
+  logged to the console.
+
+### Mapping problems to errors
+
+| What happens | Code | Message |
+|---|---|---|
+| URL does not start with `http://` or `https://`, or has no host | `invalid_url` | "This is not a valid address. Use http:// or https://, for example https://localhost:9200." |
+| Cluster answers 401 | `auth_failed` | "The username or password is wrong." |
+| Cluster answers 403 | `forbidden` | "This user is not allowed to read cluster information." |
+| No answer within 5 seconds (`AbortController`) | `timeout` | "The cluster at <url> did not answer in 5 seconds." |
+| `fetch` throws (wrong address, network, untrusted certificate, or CORS) | `unreachable` | "Cannot reach the cluster at <url>." |
+| The guard refuses the call | `read_only` | "Search Lens is read-only. This call would change the cluster." |
+| Any other answer that is not 2xx | `cluster_error` | "The cluster answered with error <status>." The cluster's own error body is kept on the error, so a screen can draw it. |
+
+Browsers do not tell a web page why a call failed, so the four causes of `unreachable` cannot be
+told apart. The connect screen lists all of them with what to do (R1.4).
 
 ### Read-only guard
 
-One function decides if a method and path may pass. The allowed list is in
-`.claude/skills/opensearch-api/reference.md`, section "Read-only guard".
-The guard runs before any call leaves the backend.
+Allowed: `GET`, `HEAD`, and `POST` only when the path ends with one of the read-style APIs in the
+reference. Everything else, including every `PUT`, `DELETE` and `PATCH`, is refused before `fetch`.
 
-## Frontend
+## Screens and components
 
 | Component | What it shows | Data it needs |
 |---|---|---|
-| `ConnectScreen` | The form, the working state, error messages, the "Skip certificate check" box | nothing at start |
-| `ConnectionBadge` | Cluster name and a coloured health word in the header; Disconnect button | `GET /api/connection` every 15 seconds |
-| `ConnectionProvider` | Holds "connected or not" for all screens | same |
-| `api/client.ts` | One place for all backend calls; turns error bodies into typed errors | none |
+| `ConnectScreen` (`src/screens/Connect/`) | The form, the working state, error messages with the cause list for `unreachable`, the read-only user tip (R3.3), and the cluster facts after success | `useConnection()` |
+| `ConnectionProvider` (`src/components/`) | Holds the client and the cluster facts in memory for all screens. Asks for `GET /_cluster/health` every 15 seconds while connected. | the client |
+| `useConnection()` | `{ state, facts, connect(details), disconnect(), request }`. `state` is `not_connected`, `connecting`, `connected` or `lost`. | `ConnectionProvider` |
+| `ConnectionBadge` (`src/components/`) | In the header: cluster name and a coloured health word, Disconnect button; "Connection lost" and "Connect again" when lost | `useConnection()` |
 
 ### Home page
 
 The home page is the first thing the user sees. It is drawn only from fixed text and fixed
-example data in the frontend, so it makes no backend or cluster call (R5.8).
+example data in the frontend, so it makes no cluster call (R5.8).
 The look comes from `prototypes/home/a-clean-lab.html`, without the "Bring your own word lists"
 section. The prototype is a picture to copy, not code to paste.
 
@@ -123,27 +134,26 @@ Colours and fonts move from the prototype into `src/styles/theme.css` as CSS var
 every screen shares them. Fonts (Atkinson Hyperlegible, JetBrains Mono) are installed as npm
 packages, so the tool works without internet.
 
-The password lives only in the form's state and is cleared as soon as the request is sent.
-Nothing is written to `localStorage` or `sessionStorage`.
-
-In development, Vite forwards `/api` to `http://localhost:8000`, so the cookie belongs to one address.
-
 ## Errors and empty states
 
 | Situation | What the user sees |
 |---|---|
-| Any connect error | The sentence from the requirements, under the form. The form keeps the URL and username. |
-| `tls_untrusted` | The explanation, and the "Skip certificate check" box is highlighted. |
+| Any connect error | The message from the table above, under the form. The form keeps the URL and username, and clears the password. |
+| `unreachable` | The message and a list: check the address and the network; open the URL in a new tab and accept the certificate (with a link that opens it); allow this page's address in the cluster's CORS settings. |
 | Health turns `red` or `yellow` | The badge shows the word and colour. No pop-up. |
-| `connection_lost` | The badge shows "Connection lost" and a "Connect again" button. |
+| A health check fails with `unreachable` or `timeout` while connected | `state` becomes `lost`. The badge shows "Connection lost" and a "Connect again" button. |
 
 ## Decisions
 
-- Session id in an `HttpOnly` cookie, because page scripts then cannot read it.
-  Other option: a token kept in JavaScript memory.
-- Connections kept in memory only, because requirement R2.4 wants them gone after a restart.
-  Other option: an encrypted file.
-- The badge asks the backend every 15 seconds, because health should stay fresh on every screen
+- **Browser-only, no backend.** Chosen by the user on 2026-10-03, so there is no server to run.
+  Other option: a small Python backend that keeps the password and runs the guard (it was built as
+  task 1 and then removed). Costs of this choice: each cluster must allow CORS; the password is in
+  page memory; the guard can be skipped by someone who edits the page, hence R3.3.
+- **No Vite proxy to the cluster in development.** It would hide CORS problems that every real
+  cluster has. Other option: proxy `/os` to the practice cluster.
+- **Login header kept in a closure**, so the password is not a field on any object.
+  Other option: keep `{ url, username, password }` in React state.
+- The badge asks for health every 15 seconds, because health should stay fresh on every screen
   without each screen doing its own check. Other option: check only when a screen opens.
 - Pages use `react-router-dom`, because there will be six pages, and the browser's back button
   and links like `/connect` should work. Other option: one state value in `App` that picks the screen.
@@ -152,14 +162,24 @@ In development, Vite forwards `/api` to `http://localhost:8000`, so the cookie b
 
 ## Test plan
 
-- Automatic, backend: each row of the error mapping table, with a fake transport; the guard with
-  allowed and refused calls; a test that the password does not appear in logs or in `repr`.
-- Automatic, frontend: the form states (empty, working, each error), the badge states.
-- Automatic, home page: all parts of R5.1 are on the page; the button and the Connect card lead to
+All tests use a fake `fetch` (`vi.stubGlobal`). No test calls a real cluster.
+
+- Guard: every allowed method and path, and refused ones (`PUT`, `DELETE`, `PATCH`, `POST` to a
+  write API). A refused call never reaches `fetch`.
+- Client: each row of the error table, with the exact message; the `Authorization` header is sent;
+  `credentials` is `omit`; the 5 second timeout; `connect()` returns the facts from the two answers.
+- Password: after connect and after each error, the password is not in any error message, not in
+  `JSON.stringify` of the client or the error, not in `console` calls, and not in `localStorage`,
+  `sessionStorage` or `document.cookie`.
+- Provider: states `not_connected`, `connecting`, `connected`, `lost`; disconnect forgets the
+  client; a new render (like a reload) starts as `not_connected`.
+- Screens: the form states (empty, working, success, each error), the cause list, the read-only tip,
+  the password field empty after Connect; the badge states.
+- Home page: all parts of R5.1 are on the page; the button and the Connect card lead to
   `/connect`; the four other cards say "Coming soon" and are not links; the logo leads to `/`;
   the demo shows "run", "shoe" and the score from `demoData.ts`; no `fetch` call happens.
-- By hand: connect to the practice cluster, with a wrong password, with the cluster stopped,
-  and with the certificate check on and off.
+- By hand: connect to the practice cluster; with a wrong password; with the cluster stopped;
+  before accepting the certificate; with CORS turned off.
 - By hand, home page: compare with the prototype; turn on "reduce motion" in the system settings
   and check nothing moves; make the window narrow and check there is one column and no sideways scroll.
 
@@ -167,22 +187,23 @@ In development, Vite forwards `/api` to `http://localhost:8000`, so the cookie b
 
 | Criterion | Handled by |
 |---|---|
-| R1.1 | `POST /api/connection`, `ConnectScreen` success state |
+| R1.1 | `connect()`, `ConnectScreen` success state |
 | R1.2 | error mapping `auth_failed` |
-| R1.3 | error mapping `unreachable` and `timeout`, 5 second client timeout |
-| R1.4 | error mapping `tls_untrusted`, `verify_tls` field, highlighted box |
+| R1.3 | error mapping `timeout`, 5 second `AbortController` |
+| R1.4 | error mapping `unreachable`, cause list on `ConnectScreen` |
 | R1.5 | `invalid_url` check before any call |
 | R1.6 | error mapping `forbidden` |
-| R1.7 | `ConnectScreen` working state, button disabled |
-| R2.1 | connection store in memory |
-| R2.2 | hidden `repr`, no body logging, log test |
-| R2.3 | form state cleared, no browser storage |
-| R2.4 | memory-only store |
-| R3.1 | read-only guard, `read_only` error |
+| R1.7 | `connecting` state, button disabled |
+| R2.1 | client in `ConnectionProvider` memory only |
+| R2.2 | header in a closure, no storage, no console, password tests |
+| R2.3 | `request` takes a path on the entered URL only, `credentials: "omit"` |
+| R2.4 | nothing stored, provider starts as `not_connected` |
+| R3.1 | `guard.ts` before `fetch`, `read_only` error |
 | R3.2 | guard allow-list |
-| R4.1 | `ConnectionBadge` in the app header |
-| R4.2 | `DELETE /api/connection`, client closes, store entry removed |
-| R4.3 | `connection_lost` error, badge "Connection lost" state |
+| R3.3 | read-only user tip on `ConnectScreen` |
+| R4.1 | `ConnectionBadge` in `AppHeader` |
+| R4.2 | `disconnect()` forgets the client, back to `/connect` |
+| R4.3 | `lost` state, badge "Connection lost" |
 | R5.1 | `HomeScreen`, `ScreenCards`, `HowItWorks` |
 | R5.2 | "Connect to a cluster" link to `/connect`, router |
 | R5.3 | `ScreenCards` with the `ready` flag |

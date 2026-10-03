@@ -17,7 +17,7 @@ The app code is not written yet. You will build it feature by feature, with a sp
 
 - Claude Code. See the official documentation: https://code.claude.com/docs
 - Git
-- Python 3.11 or newer, and Node.js, for the app
+- Node.js, for the app (it runs only in the browser, there is no backend)
 - Docker, for the practice cluster
 
 ## What is in the folder
@@ -26,7 +26,7 @@ The app code is not written yet. You will build it feature by feature, with a sp
 |---|---|
 | `CLAUDE.md` | Project instructions that Claude reads in every session |
 | `.claude/settings.json` | What Claude may and may not do here |
-| `.claude/rules/` | Extra instructions for backend, frontend, specs, and cluster safety |
+| `.claude/rules/` | Extra instructions for the frontend, specs, and cluster safety |
 | `.claude/skills/` | The `/spec-...` commands and the OpenSearch API reference |
 | `.claude/agents/` | Two helpers: `spec-reviewer` and `code-reviewer` |
 | `.claude/output-styles/` | Asks Claude to answer in simple English with examples |
@@ -48,6 +48,7 @@ The app code is not written yet. You will build it feature by feature, with a sp
 
 ## Changing the technology
 
-The default is a Python backend and a React frontend. To use something else, edit
-`docs/steering/tech.md` and the two rule files for backend and frontend before you approve
-the design of spec 001. Then ask Claude to update the design and tasks of spec 001 to match.
+Search Lens is a React app that runs only in the browser and calls OpenSearch directly.
+An earlier plan had a Python backend; it was removed on 2026-10-03 (see `docs/steering/tech.md`).
+To change the technology, edit `docs/steering/tech.md` and `.claude/rules/frontend.md` first,
+then ask Claude to update the spec to match, then the code.

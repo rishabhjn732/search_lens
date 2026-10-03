@@ -15,8 +15,8 @@ Think of the project as an office and Claude as a new colleague.
 ## The same thing, in this project
 
 - `CLAUDE.md` says: "write the spec first" and "never change the cluster".
-- `.claude/rules/backend.md` starts with `paths: backend/**`. Claude reads it only when it works on backend files.
-  This keeps Claude's memory space free when it works on the frontend.
+- `.claude/rules/frontend.md` starts with `paths: frontend/**`. Claude reads it only when it works on frontend files.
+  This keeps Claude's memory space free when it works on specs or docs.
 - `.claude/skills/spec-requirements/SKILL.md` is the recipe for writing a requirements file.
   You start it by typing `/spec-requirements 002`.
 - `.claude/agents/spec-reviewer.md` is a helper that can only read files (`tools: Read, Grep, Glob`).

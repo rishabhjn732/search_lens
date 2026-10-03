@@ -63,7 +63,7 @@ The query lab is big. Use it to practise changing the Claude Code files.
 2. Write your own rule: create `.claude/rules/visualization.md` with `paths:` for the frontend screens.
    Put your rules for score pictures in it: colours, how numbers are rounded, what is shown first.
 3. Write your own skill: create `.claude/skills/explain-sample/SKILL.md`. It should run a query against the
-   practice cluster through the backend and save the raw answer as a test file. Ask Claude to help you write it,
+   practice cluster (for example with `curl`) and save the raw answer as a test file. Ask Claude to help you write it,
    and read the official skills page first: https://code.claude.com/docs/en/skills
 4. Each time Claude makes a mistake that it could make again, add one line to `CLAUDE.md` or to a rule.
 

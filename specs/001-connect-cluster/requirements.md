@@ -7,6 +7,7 @@ Status: approved
 The user gives the address of an OpenSearch cluster, a username and a password.
 The tool checks that it can talk to the cluster and shows basic facts about it.
 After that, every other screen uses this connection. The tool never changes the cluster.
+The tool runs only in the browser and talks to the cluster directly (decided 2026-10-03).
 The tool opens on a home page that explains what it does and leads to the connect screen.
 
 ## Requirements
@@ -22,10 +23,13 @@ Acceptance criteria:
   THE SYSTEM SHALL check the cluster and show its name, version, number of nodes and health status.
 - R1.2 WHEN the username or password is wrong THE SYSTEM SHALL show
   "The username or password is wrong." and stay on the connect screen.
-- R1.3 WHEN the cluster cannot be reached or does not answer within 5 seconds THE SYSTEM SHALL show
-  "Cannot reach the cluster at <url>." and suggest checking the address and the network.
-- R1.4 WHEN the cluster's security certificate is not trusted THE SYSTEM SHALL explain this
-  and offer a "Skip certificate check" option.
+- R1.3 WHEN the cluster does not answer within 5 seconds THE SYSTEM SHALL show
+  "The cluster at <url> did not answer in 5 seconds." and suggest checking the address and the network.
+- R1.4 WHEN the browser cannot complete the call (wrong address, network down, a certificate the
+  browser does not trust, or the cluster does not allow calls from this page) THE SYSTEM SHALL show
+  "Cannot reach the cluster at <url>." and list these causes, each with what to do:
+  check the address and the network; open the URL in a new tab once and accept the certificate;
+  allow this page's address in the cluster's CORS settings.
 - R1.5 WHEN the URL is not a valid http or https address THE SYSTEM SHALL say so
   before any call is made to the cluster.
 - R1.6 WHEN the login is correct but the user is not allowed to read cluster information
@@ -40,10 +44,11 @@ so that using the tool does not create a security problem.
 
 Acceptance criteria:
 
-- R2.1 THE SYSTEM SHALL keep the password only in the memory of the backend.
-- R2.2 THE SYSTEM SHALL NOT write the password to disk, to logs, or into error messages.
-- R2.3 THE SYSTEM SHALL NOT keep the password in the browser after the connect request is sent.
-- R2.4 WHEN the backend restarts THE SYSTEM SHALL ask the user to connect again.
+- R2.1 THE SYSTEM SHALL keep the password only in the memory of the open page.
+- R2.2 THE SYSTEM SHALL NOT write the password to browser storage, to the browser console,
+  or into error messages.
+- R2.3 THE SYSTEM SHALL send the password only to the cluster address the user entered.
+- R2.4 WHEN the page is reloaded or closed THE SYSTEM SHALL ask the user to connect again.
 
 ### R3. Read-only
 
@@ -53,8 +58,10 @@ so that I can point it at production without fear.
 Acceptance criteria:
 
 - R3.1 WHEN any part of the tool tries a call that would change the cluster THE SYSTEM SHALL refuse it
-  and show "Search Lens is read-only. This call would change the cluster."
+  before it is sent and show "Search Lens is read-only. This call would change the cluster."
 - R3.2 THE SYSTEM SHALL allow read calls and the search-style calls listed in the project's API reference.
+- R3.3 THE SYSTEM SHALL say on the connect screen: "For the most safety, connect with a user that
+  can only read." Because the tool runs in the browser, this is the protection that cannot be skipped.
 
 ### R4. See the connection and disconnect
 
@@ -101,6 +108,9 @@ Acceptance criteria:
 - Connecting to more than one cluster at once.
 - Login methods other than username and password (AWS request signing, API keys, single sign-on).
 - More than one person using the same running tool.
+- Working with a cluster that does not allow calls from a web page (CORS off). The tool explains
+  how to allow it (R1.4) but cannot work around it.
+- A backend server. It was planned and then removed (2026-10-03); see `docs/steering/tech.md`.
 - The "Bring your own word lists" section and the Word lists tab from the prototypes.
   They get their own spec (`custom-word-lists`).
 - The content of screens 2 to 5. The home page only shows their cards.

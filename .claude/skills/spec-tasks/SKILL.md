@@ -13,7 +13,7 @@ Write the task list for spec `$ARGUMENTS`.
    - Each task is small: one piece of behaviour, finished in one sitting, with tests passing at the end.
    - Each task lists the criterion ids it covers, like `(R1.1, R1.2)`.
    - Each task lists the main files it will create or change.
-   - Order them so that each task builds on finished ones. Backend before the screen that needs it.
+   - Order them so that each task builds on finished ones. Cluster code (`src/opensearch/`) before the screen that needs it.
    - The last task is a manual check against the local practice cluster.
    - Every criterion id in `requirements.md` appears in at least one task.
 4. Set `Status: draft`.

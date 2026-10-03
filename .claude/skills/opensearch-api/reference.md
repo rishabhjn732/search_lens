@@ -77,6 +77,6 @@ Allowed without question: `GET`, `HEAD`.
 `_render/template`, `_field_caps`, `_termvectors`, `_mtermvectors`, `_rank_eval`,
 or matches `_explain/<doc_id>`.
 
-Everything else is rejected with HTTP 403 and the message
+Everything else is refused in the browser, before it is sent, with the code `read_only` and the message
 "Search Lens is read-only. This call would change the cluster."
 `PUT`, `DELETE`, and `PATCH` are always rejected.

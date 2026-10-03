@@ -19,6 +19,81 @@ A new session reads this file to continue the work. Newest entry at the bottom.
 - For the next session:
   - Run tests with `cd backend && uv run pytest`. Run the server with
     `cd backend && uv run uvicorn app.main:app --reload --port 8000`.
-  - Git: `search-lens` now has its own repository (branch `main`, created 2026-10-03, no commits
-    yet). An empty, unused repository also exists in the home folder; it does not affect this one.
+  - Git: `search-lens` now has its own repository (branch `main`, created 2026-10-03, pushed to
+    `git@github.com:rishabhjn732/search_lens.git`). An empty, unused repository also exists in the home folder; it does not affect this one.
   - Next task: 2, Frontend skeleton.
+
+## Task 2: Frontend skeleton (setup)
+
+- Built: React 19 + TypeScript (strict) + Vite 8 app in `frontend/`. `src/App.tsx` shows a header
+  ("Search Lens") and an empty `<main>`. `vite.config.ts` forwards `/api` to `http://localhost:8000`
+  and holds the Vitest config (jsdom, `src/setupTests.ts`). `src/api/client.ts` exports `api.get`,
+  `api.post`, `api.delete` and `ApiError` (`code`, `message`, `status`). Tests: `App.test.tsx` (2),
+  `api/client.test.ts` (6). Checked by hand: `/api/health` through Vite returns `{"data":"ok"}`.
+- Decisions:
+  - `client.ts` has two client-side error codes that are not in the spec, for answers that never
+    reach a backend route: `backend_unreachable` (fetch fails) and `unexpected_response` (body has
+    neither `data` nor `error`). Their messages are in `client.ts`. If the user wants different
+    wording, update the spec first.
+  - `204 No Content` (for `DELETE /api/connection`) returns `undefined`.
+  - `build` runs `tsc --noEmit` then `vite build`. Base CSS is in `src/index.css`; the real theme
+    comes in task 3 (`src/styles/theme.css`).
+- For the next session:
+  - `npm audit` reports 2 moderate issues in `@vitest/mocker` (dev only, from Vitest 3.2.7).
+    Fix: Vitest 5. `npm install -D vitest@5` fails with an npm bug ("edgesOut"); the fix is to set
+    `"vitest": "^5.0.3"` in `package.json`, delete `node_modules` and `package-lock.json`, and
+    run `npm install`. Deleting was blocked by permissions this session, so the user should do it.
+  - Next task: 3, Home page. It adds `react-router-dom` and the `@fontsource` font packages.
+
+## Plan change: browser-only (2026-10-03)
+
+- The user chose to remove the backend. The browser now calls OpenSearch directly.
+- Changed: `docs/steering/tech.md`, `structure.md`, `.claude/rules/cluster-safety.md`, the
+  `opensearch-api` skill text, `CLAUDE.md`, and all three spec files (set back to `draft` for
+  the user to approve again). Ids kept; R1.3, R1.4, R2.1 to R2.4, R3.1 reworded; R3.3 added.
+- Tasks renumbered: the done "Frontend skeleton" is now task 1. The old backend task is gone, and
+  the new task 2 deletes `backend/`, `frontend/src/api/` and the `/api` proxy.
+  The two client-side codes from the old task 2 (`backend_unreachable`, `unexpected_response`)
+  go away with `src/api/`.
+- Not changed yet (task 2 does it): `README.md`, `docs/learning/`, `code-reviewer` agent,
+  `spec-design` and `spec-tasks` skills, `.claude/rules/backend.md`, the code itself.
+- 2026-10-03: the user approved all three spec files (browser-only version) by answering a question
+  in the session; Claude changed the three `Status:` lines on their instruction.
+
+## Task 2: Remove the backend (setup)
+
+- Built (removed): `backend/` (via `git rm`), `.claude/rules/backend.md`, `frontend/src/api/`, the `/api`
+  proxy in `vite.config.ts`. Updated the backend mentions in `README.md`, `.claude/rules/frontend.md`,
+  `docs/learning/01` and `04`, the `code-reviewer` agent, the `spec-design` and `spec-tasks` skills,
+  `specs/_templates/design.md` (its "Backend" section is now "Cluster code"), `specs/BACKLOG.md`,
+  and the "How it works" text in `prototypes/home/a-clean-lab.html` (it said the backend holds the password).
+- Decisions: `.claude/settings.json` denies `rm -rf`, so tracked files were removed with `git rm` and the
+  user deletes the leftover `backend/` folder (`.venv`, caches; all git-ignored) by hand.
+  `"Bash(pytest *)"` is still in the settings allow-list; harmless, can be removed later.
+- For the next session: remaining "backend" words are history (`README.md`, `CLAUDE.md`, `tech.md`)
+  or mean people ("backend developers" in `product.md`). Prototypes B and C still mention a backend;
+  they are not used.
+
+## Task 3: Home page (R5.1 to R5.8)
+
+- Built: `react-router-dom` with `/` (HomeScreen) and `/connect` (`ConnectPlaceholder`, replaced in
+  task 7). `App.tsx` exports `AppRoutes` (header + routes) so tests can use a `MemoryRouter`.
+  `src/styles/theme.css` (colours, fonts via `@fontsource`, `.wrap`, `.btn`), `components/AppHeader`,
+  `screens/Home/`: `HomeScreen`, `QueryDemo`, `ScreenCards` (`ready` flag; only Connect is a link),
+  `HowItWorks` (3 steps, score picture, read-only sentence), `demoData.ts`, `home.css`.
+  Tests: `HomeScreen.test.tsx` (7, one or more per criterion except R5.5 and R5.7), `App.test.tsx` (2).
+- Decisions:
+  - `QueryDemo` reads `demoData.ts` in the real `_analyze` explain shape. The removed "!" is found from
+    gaps between token offsets; changed tokens are coloured by comparing with the step before.
+    The Token playground can reuse this.
+  - Header menu has "Home" and "Connect" only. The prototype's "Word lists" link belongs to the
+    `custom-word-lists` spec; its in-page links were left out because they would not work from `/connect`.
+  - No "Not connected" badge yet; `ConnectionBadge` comes in task 8.
+  - The score picture's parts (run 4.61 + shoe 3.23 = 7.84) are fixed numbers in `HowItWorks.tsx`.
+  - The old `App.test.tsx` test "main is empty" was replaced by "opens on the home page", because
+    the spec now puts the home page there.
+  - Below 900 px the screen cards are one column (the prototype used two), as R5.7 says.
+- For the next session:
+  - R5.5 (reduce motion) and R5.7 (narrow window) are CSS only; check them by hand (task 10).
+  - Compare the page with `prototypes/home/a-clean-lab.html` by hand; it was not screenshotted.
+  - Next task: 4, Read-only guard.

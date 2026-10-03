@@ -24,7 +24,7 @@ Write the design for spec `$ARGUMENTS`.
 6. Write `design.md` from `specs/_templates/design.md`. It must have:
    - A short overview in simple English.
    - Each OpenSearch API call: method, path, the important parameters, and a small example response.
-   - Backend routes: path, request body, response body, error codes.
+   - Cluster code: the functions in `src/opensearch/` the feature adds or uses, and their error codes.
    - Frontend parts: screens, components, what data each one needs.
    - How errors and empty states are shown.
    - A test plan: what is tested with fake cluster responses, and what is checked by hand.
