@@ -22,5 +22,6 @@ Run `/spec-status` to refresh this table.
 | 003-token-playground | missing | missing | missing | `/spec-requirements 003` |
 | 004-query-lab | missing | missing | missing | `/spec-requirements 004` |
 | 005-load-monitor | missing | missing | missing | `/spec-requirements 005` |
+| 007-mapping-lab | approved | approved | 0 of 10 | `/spec-implement 007` |
 
 Ideas for later features are in `BACKLOG.md`.

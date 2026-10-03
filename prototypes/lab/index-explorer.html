@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search Lens · Index explorer (prototype)</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="lab.css">
+<style>
+/* score part colours: validated categorical order (dataviz skill), without green and red,
+   which mean "found" and "not found" on these pages */
+:root{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#4a3aa7;--other:#9AA3B2}
+.ai-toggle{font-size:.82rem;padding:5px 12px;border-radius:99px}
+.ai-toggle[aria-pressed=true]{background:var(--purple-bg);color:var(--purple);border-color:var(--purple)}
+
+/* top 10 */
+.top10{padding:16px 18px}
+.top10 .bar-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.irow{display:grid;grid-template-columns:96px minmax(150px,230px) 1fr 92px 120px;gap:12px;align-items:center;width:100%;padding:7px 10px;border:0;border-radius:8px;background:none;text-align:left;font-size:.92rem}
+.irow:hover{background:var(--board)}
+.irow[aria-pressed=true]{background:var(--blue-bg);color:var(--ink)}
+.irow .nm{font-family:var(--mono);font-size:.86rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.irow .track{height:14px;position:relative}
+.irow .track span{position:absolute;left:0;top:0;bottom:0;background:var(--blue);border-radius:0 4px 4px 0;min-width:3px}
+.irow .num{font-family:var(--mono);font-size:.82rem;text-align:right}
+.irow .num.muted{color:var(--muted)}
+.health{display:inline-flex;align-items:center;gap:6px;font-size:.8rem}
+.health i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.health.green i{background:var(--green)} .health.yellow i{background:#C99A00} .health.red i{background:var(--red)}
+.more-note{font-size:.85rem;color:var(--muted);margin:10px 10px 0}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--board);font-size:.8rem;padding:6px 10px;border-radius:6px;z-index:50;max-width:280px}
+
+/* index head + tabs */
+.ihead{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin:8px 0 14px}
+.ihead h2{font-family:var(--mono);font-size:1.5rem}
+.facts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.fact{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:.85rem}
+.fact b{display:block;font-family:var(--mono);font-size:1rem}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:10px 16px;font-size:1rem;color:var(--muted)}
+.tabs button[aria-selected=true]{border-bottom-color:var(--ink);color:var(--ink);font-weight:700}
+
+/* fields */
+.kinds{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.kind{border-radius:12px;padding:12px 16px;border:1px solid var(--line);background:var(--panel)}
+.kind b{font-family:var(--mono);font-size:1.6rem;display:block;line-height:1.1}
+.kind.text{border-left:5px solid var(--blue)} .kind.keyword{border-left:5px solid var(--purple)} .kind.other{border-left:5px solid var(--muted)}
+.ftable{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.frow{display:grid;grid-template-columns:minmax(170px,240px) 110px 1fr;gap:12px;align-items:center;padding:10px 16px;border-top:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-bottom:0;border-radius:0;text-align:left;font-size:.92rem}
+.frow:first-child{border-top:0}
+button.frow:hover{background:var(--board)}
+.frow .fn{font-family:var(--mono);font-size:.88rem}
+.frow .fn .ind{color:var(--line)}
+.frow .say{color:var(--muted);font-size:.86rem}
+.frow .say .pipe{margin-top:4px}
+.ttag{font-family:var(--mono);font-size:.72rem;padding:2px 8px;border-radius:6px;justify-self:start}
+.ttag.text{background:var(--blue-bg);color:var(--blue)} .ttag.keyword{background:var(--purple-bg);color:var(--purple)}
+.ttag.other,.ttag.object{background:var(--board);color:var(--muted);border:1px solid var(--line)}
+.tryit{padding:12px 16px 16px;background:var(--board);border-top:1px dashed var(--line);display:grid;gap:10px}
+.tryit .side{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:center;font-size:.85rem}
+.tryit .side > span:first-child{color:var(--muted)}
+
+/* settings */
+.nodes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.node{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px}
+.node h4{margin:0 0 8px;font-family:var(--mono);font-size:.85rem;display:flex;align-items:center;gap:8px}
+.node .sh{display:flex;gap:8px;flex-wrap:wrap;min-height:46px}
+.shard{width:52px;height:42px;border-radius:8px;display:grid;place-items:center;font-family:var(--mono);font-size:.8rem;font-weight:500}
+.shard.p{background:var(--blue);color:#fff}
+.shard.r{border:2px solid var(--blue);color:var(--blue);background:var(--blue-bg)}
+.shard.u{border:2px dashed var(--red);color:var(--red);background:var(--red-bg)}
+.unassigned{margin-top:12px;display:flex;gap:12px;align-items:center;padding:10px 14px;border-radius:10px;background:var(--red-bg);color:var(--red);font-size:.9rem}
+.scards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:18px}
+.scard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.scard .k{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.scard .v{font-family:var(--mono);font-size:1.25rem;font-weight:500;margin:2px 0 4px}
+.scard p{margin:0;font-size:.88rem}
+.anlist{display:grid;gap:10px;margin-top:10px}
+.an{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.an b{font-family:var(--mono)}
+.an p{margin:4px 0 8px;font-size:.88rem;color:var(--muted)}
+
+/* explain */
+.qgrid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start}
+.qgrid textarea{min-height:210px}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.runbar{display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.qerr{color:var(--red);font-weight:700;font-size:.9rem}
+.plain{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.plain h3{font-size:.95rem;margin-bottom:6px}
+.plain ul{margin:0;padding-left:18px;font-size:.92rem}
+.plain li{margin:4px 0}
+.plain .api{margin:10px 0 0;font-size:.8rem;color:var(--muted)}
+.warnings{margin:12px 0 0;padding:8px 12px;border-radius:8px;background:var(--yellow-bg);color:var(--yellow);font-size:.88rem}
+.rgrid{display:grid;grid-template-columns:1fr 1.05fr;gap:16px;align-items:start;margin-top:20px}
+.rhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.rhead .big{font-size:1.15rem}
+.terms{display:flex;gap:12px;flex-wrap:wrap;font-size:.82rem;margin-bottom:10px}
+.terms span{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono)}
+.terms i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.hit{display:grid;grid-template-columns:30px 1fr;gap:10px;width:100%;text-align:left;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+.hit[aria-pressed=true]{border:2px solid var(--ink);padding:11px 13px;background:var(--panel);color:var(--ink)}
+.hit .rk{font-family:var(--mono);color:var(--muted);font-size:.9rem;padding-top:2px}
+.hit .t{font-size:.98rem}
+.hit .t mark{background:var(--green-bg);border-radius:3px;padding:0 2px;color:inherit}
+.hit .meta{font-size:.8rem;color:var(--muted);margin:2px 0 8px}
+.sbar{display:flex;align-items:center;gap:10px}
+.sbar .track{flex:1;height:14px;display:flex;gap:2px}
+.sbar .track span{height:100%;display:block}
+.sbar .track span:first-child{border-radius:4px 0 0 4px}
+.sbar .track span:last-child{border-radius:0 4px 4px 0}
+.sbar .track span:only-child{border-radius:4px}
+.sbar code{min-width:3.6em;text-align:right;font-size:.85rem}
+.zero{font-size:.8rem;color:var(--muted)}
+.misses{margin-top:14px}
+.misses summary{cursor:pointer;font-weight:700}
+.miss{background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:8px 12px;margin-top:6px;font-size:.88rem}
+.miss b{display:block;font-weight:400}
+.miss span{color:var(--red)}
+
+.why{position:sticky;top:76px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;max-height:calc(100vh - 96px);overflow:auto}
+.why h3{font-size:1.1rem;margin-bottom:2px}
+.why .total{font-size:1.05rem;margin:0 0 12px;color:var(--muted)}
+.why .total b{font-family:var(--mono);font-size:1.6rem;color:var(--ink)}
+.eq{display:flex;align-items:stretch;gap:2px;height:40px;margin-bottom:6px}
+.eq span{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.74rem;color:#fff;overflow:hidden;white-space:nowrap;min-width:6px}
+.eq span:first-child{border-radius:6px 0 0 6px}
+.eq span:last-child{border-radius:0 6px 6px 0}
+.eq span:only-child{border-radius:6px}
+.eqtxt{font-family:var(--mono);font-size:.82rem;color:var(--muted);margin:0 0 14px;overflow-wrap:anywhere}
+.part{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;border-left-width:6px}
+.part.lost{opacity:.55;border-left-color:var(--line)!important;border-style:dashed}
+.part h4{margin:0 0 8px;font-size:.95rem;display:flex;justify-content:space-between;gap:8px}
+.part h4 code{font-size:.95rem}
+.factor{display:grid;grid-template-columns:150px 1fr;gap:4px 12px;margin:6px 0;font-size:.86rem;align-items:baseline}
+.factor .fl{font-weight:700}
+.factor .fl small{display:block;font-weight:400;color:var(--muted);font-family:var(--mono);font-size:.72rem}
+.factor .fx{color:var(--ink)}
+.factor .fx b{font-family:var(--mono)}
+.formula{font-family:var(--mono);font-size:.8rem;background:var(--board);border-radius:6px;padding:5px 8px;margin-top:8px}
+.lostnote{font-size:.85rem;color:var(--muted);margin:-4px 0 10px}
+.passed{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+.passed span{font-family:var(--mono);font-size:.78rem;padding:3px 8px;border-radius:6px;background:var(--green-bg);color:var(--green)}
+.askai{width:100%;justify-content:center;margin-top:6px;border-color:var(--purple);color:var(--purple);background:var(--purple-bg);font-weight:700}
+.askai:disabled{background:var(--board);color:var(--muted);border-color:var(--line)}
+.aihint{font-size:.82rem;color:var(--muted);margin:6px 0 0;text-align:center}
+.nodocs{background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:18px;color:var(--muted)}
+
+/* AI drawer and dialog */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(480px,100%);background:var(--panel);border-left:1px solid var(--line);box-shadow:-20px 0 40px -20px rgba(24,32,47,.3);z-index:40;display:flex;flex-direction:column}
+.drawer header{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.drawer header h3{flex:1}
+.drawer .body{padding:16px 18px;overflow:auto;display:grid;gap:14px}
+.drawer .sends{font-size:.84rem;background:var(--yellow-bg);color:var(--yellow);border-radius:8px;padding:8px 12px}
+.drawer textarea{min-height:170px;font-size:12.5px}
+.answer{background:var(--board);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:.95rem;white-space:pre-wrap;min-height:60px}
+.answer .lbl3{display:block;font-size:.76rem;color:var(--purple);font-weight:700;margin-bottom:6px;white-space:normal}
+dialog{border:1px solid var(--line);border-radius:14px;padding:22px 24px;max-width:520px;color:var(--ink);font-family:var(--sans)}
+dialog::backdrop{background:rgba(24,32,47,.35)}
+dialog h3{margin-bottom:8px}
+dialog ul{padding-left:20px;margin:8px 0}
+dialog .row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+
+@media (max-width:980px){
+  .irow{grid-template-columns:80px 1fr 80px;}
+  .irow .track,.irow .num.muted{display:none}
+  .qgrid,.rgrid,.kinds,.nodes{grid-template-columns:1fr}
+  .frow{grid-template-columns:1fr}
+  .why{position:static;max-height:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="../home/a-clean-lab.html">
+      <svg width="26" height="26" viewBox="0 0 28 28" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="#18202F" stroke-width="2.5"/><line x1="18" y1="18" x2="25" y2="25" stroke="#18202F" stroke-width="3" stroke-linecap="round"/><circle cx="12" cy="12" r="3" fill="#0F6F93"/></svg>
+      Search Lens
+    </a>
+    <nav aria-label="Main">
+      <a href="../home/a-clean-lab.html">Home</a>
+      <a href="mapping-lab.html">Mapping lab</a>
+      <a href="index-explorer.html" aria-current="page">Index explorer</a>
+      <a href="../home/a-word-lists.html">Word lists</a>
+    </nav>
+    <button class="ai-toggle" id="aiToggle" aria-pressed="false" title="AI help is off. Click to turn it on.">AI help: off</button>
+    <span class="badge on" id="conn"><i></i></span>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="page-head">
+    <p class="eyebrow">Index explorer</p>
+    <h1>Pick an index. See its <mark>shape</mark>. Ask <mark>why</mark> a result is first.</h1>
+    <p class="lead">Your biggest indexes, their fields and settings as pictures, and a search box that explains every score in plain words.</p>
+    <p class="proto-note"><b>Prototype.</b> This is a made-up cluster. Sizes are invented, and searches run over a few sample documents inside this page. The real tool reads them from your cluster with read-only calls.</p>
+  </div>
+
+  <section class="block" id="top">
+    <h2>Your 10 biggest indexes</h2>
+    <p class="sub">Click one to open it. Big indexes are usually the ones that matter most, and the ones that cost the most.</p>
+    <div class="panel top10">
+      <div class="bar-head">
+        <span class="lbl" id="sortLbl" style="margin:0">Sort by</span>
+        <div class="seg" role="group" aria-labelledby="sortLbl">
+          <button data-sort="size" aria-pressed="true">Size on disk</button>
+          <button data-sort="docs" aria-pressed="false">Documents</button>
+        </div>
+        <span class="legend" style="margin-left:auto">
+          <span class="health green"><i></i>green: all copies placed</span>
+          <span class="health yellow"><i></i>yellow: a backup copy is missing</span>
+          <span class="health red"><i></i>red: data is missing</span>
+        </span>
+      </div>
+      <div id="top10" role="list"></div>
+      <p class="more-note" id="moreNote"></p>
+      <details class="raw" style="margin:6px 10px 0"><summary>Which call does the real tool make?</summary>
+        <pre class="code">GET _cat/indices?format=json&amp;bytes=b&amp;s=store.size:desc&amp;h=index,health,status,pri,rep,docs.count,store.size</pre>
+        <p class="hint" style="margin-top:6px">A read-only call. The tool keeps the first 10 and hides system indexes (names starting with a dot).</p>
+      </details>
+    </div>
+  </section>
+
+  <section class="block" id="detail">
+    <div class="ihead">
+      <div style="flex:1;min-width:260px">
+        <h2 id="iname"></h2>
+        <p class="sub" id="iabout" style="margin:2px 0 0"></p>
+        <div class="facts" id="facts"></div>
+      </div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-fields" aria-controls="pane-fields" aria-selected="false">Fields</button>
+      <button role="tab" id="tab-settings" aria-controls="pane-settings" aria-selected="false">Settings</button>
+      <button role="tab" id="tab-explain" aria-controls="pane-explain" aria-selected="true">Search and explain</button>
+    </div>
+
+    <div role="tabpanel" id="pane-fields" aria-labelledby="tab-fields" hidden>
+      <div class="kinds" id="kinds"></div>
+      <div class="ftable" id="ftable"></div>
+      <details class="raw"><summary>Show the raw mapping (GET /<span class="cur"></span>/_mapping)</summary><pre class="code" id="rawMapping"></pre></details>
+    </div>
+
+    <div role="tabpanel" id="pane-settings" aria-labelledby="tab-settings" hidden>
+      <h3 style="margin-bottom:4px">Where the data lives</h3>
+      <p class="sub" id="shardSay"></p>
+      <div class="nodes" id="nodes"></div>
+      <div id="unassigned"></div>
+      <div class="scards" id="scards"></div>
+      <h3 style="margin:24px 0 0">Analyzers made for this index</h3>
+      <div class="anlist" id="anlist"></div>
+      <details class="raw"><summary>Show the raw settings (GET /<span class="cur"></span>/_settings)</summary><pre class="code" id="rawSettings"></pre></details>
+    </div>
+
+    <div role="tabpanel" id="pane-explain" aria-labelledby="tab-explain">
+      <div class="qgrid">
+        <div>
+          <span class="lbl">Try a ready-made query</span>
+          <div class="presets" id="presets"></div>
+          <label class="lbl" for="qsrc">Your query (the body of <code>POST /<span class="cur"></span>/_search</code>)</label>
+          <textarea id="qsrc" spellcheck="false"></textarea>
+          <div class="runbar">
+            <button class="primary" id="run">Run and explain</button>
+            <span class="hint">or press Ctrl + Enter</span>
+            <span class="qerr" id="qerr" role="alert"></span>
+          </div>
+        </div>
+        <div class="plain">
+          <h3>Your query, in plain words</h3>
+          <ul id="plainQ"></ul>
+          <p class="api">The real tool sends this with <code>"explain": true</code>. That is a read-only search, so it is allowed.</p>
+          <div id="warnings"></div>
+        </div>
+      </div>
+      <div id="results"></div>
+    </div>
+  </section>
+</main>
+<footer class="foot"><div class="wrap">Search Lens · Index explorer · prototype, not production code</div></footer>
+
+<aside class="drawer" id="drawer" hidden aria-labelledby="drawerTitle">
+  <header><h3 id="drawerTitle">Ask AI to explain</h3><button id="closeDrawer" class="small" aria-label="Close">Close</button></header>
+  <div class="body">
+    <p class="sends"><b>This sends data to Anthropic (Claude).</b> It sends the query, the fields it uses, and the score explanation for one document. It never sends your cluster password or address.</p>
+    <div><label class="lbl" for="aiModel">Model</label>
+      <select id="aiModel"><option value="claude-sonnet-5-5">Claude Sonnet 5.5 (fast, good)</option><option value="claude-opus-5-5">Claude Opus 5.5 (most careful)</option><option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (fastest, cheapest)</option></select></div>
+    <div><label class="lbl" for="aiKey">Your Anthropic API key</label>
+      <input id="aiKey" type="password" autocomplete="off" placeholder="sk-ant-...">
+      <span class="hint">Kept in this page's memory only, like the cluster password. Never saved. A reload forgets it.</span></div>
+    <div><label class="lbl" for="aiQuestion">Your question</label><input id="aiQuestion" type="text"></div>
+    <div><label class="lbl" for="aiPrompt">Your prompt (you can change it)</label>
+      <textarea id="aiPrompt" spellcheck="false"></textarea>
+      <span class="hint">Placeholders: {{question}} {{query}} {{fields}} {{explanation}} {{rank}}</span></div>
+    <details class="raw"><summary id="sendSize">Show exactly what will be sent</summary><pre class="code" id="aiPreview" style="white-space:pre-wrap"></pre></details>
+    <button class="primary" id="aiSend">Send to Claude</button>
+    <div class="answer" id="aiAnswer" hidden></div>
+  </div>
+</aside>
+
+<dialog id="aiDialog" aria-labelledby="aiDlgTitle">
+  <h3 id="aiDlgTitle">Turn on AI help?</h3>
+  <p>AI help is off by default. When it is on, an <b>Ask AI to explain</b> button appears next to each score explanation. Nothing is sent until you press <b>Send</b>.</p>
+  <ul>
+    <li>What is sent: your query, the fields it uses, and one score explanation.</li>
+    <li>What is never sent: your cluster password and address.</li>
+    <li>You need your own Anthropic API key. Using it costs a little money per question.</li>
+  </ul>
+  <div class="row"><button id="aiNo">Keep it off</button><button class="primary" id="aiYes">Turn on</button></div>
+</dialog>
+
+<div class="tip" id="tip" hidden></div>
+
+<script src="analyzer.js"></script>
+<script src="samples.js"></script>
+<script src="cluster-data.js"></script>
+<script src="search.js"></script>
+<script>
+'use strict';
+var Lx = window.Lens, C = window.LensCluster, SE = window.LensSearch;
+var $ = function (id) { return document.getElementById(id); };
+function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+var SLOTS = ['var(--s1)', 'var(--s2)', 'var(--s3)', 'var(--s4)', 'var(--s5)', 'var(--s6)'];
+
+var state = {sort: 'size', index: 'products', tab: 'explain', ai: false, open: null, resp: null, hit: 0, colors: {}, built: {}};
+
+function fmtBytes(b) { return b >= 1e9 ? (b / 1e9).toFixed(1) + ' GB' : b >= 1e6 ? Math.round(b / 1e6) + ' MB' : Math.round(b / 1e3) + ' kB'; }
+function fmtNum(n) { return n.toLocaleString('en-US'); }
+function short(n) { return n >= 1e6 ? (n / 1e6).toFixed(1) + ' M' : n >= 1e3 ? (n / 1e3).toFixed(1) + ' k' : String(n); }
+function cur() { return C.indexes.find(function (x) { return x.index === state.index; }); }
+
+// ---- tooltip --------------------------------------------------------
+function tipOn(node, text) {
+  node.addEventListener('mousemove', function (e) { var t = $('tip'); t.textContent = typeof text === 'function' ? text() : text; t.hidden = false; t.style.left = (e.clientX + 14) + 'px'; t.style.top = (e.clientY + 14) + 'px'; });
+  node.addEventListener('mouseleave', function () { $('tip').hidden = true; });
+}
+
+// ---- top 10 ---------------------------------------------------------
+function renderTop() {
+  var list = C.indexes.slice().sort(function (a, b) { return state.sort === 'size' ? b.size - a.size : b.docs - a.docs; });
+  var max = state.sort === 'size' ? list[0].size : list[0].docs;
+  var box = $('top10'); box.replaceChildren();
+  list.forEach(function (ix) {
+    var b = el('button', 'irow'); b.setAttribute('role', 'listitem'); b.setAttribute('aria-pressed', String(ix.index === state.index));
+    var h = el('span', 'health ' + ix.health); h.append(el('i'), document.createTextNode(ix.health));
+    var track = el('span', 'track'), bar = el('span');
+    bar.style.width = (100 * (state.sort === 'size' ? ix.size : ix.docs) / max) + '%'; track.append(bar);
+    b.append(h, el('span', 'nm', ix.index), track,
+      el('span', 'num', state.sort === 'size' ? fmtBytes(ix.size) : short(ix.docs)),
+      el('span', 'num muted', state.sort === 'size' ? short(ix.docs) + ' docs' : fmtBytes(ix.size)));
+    b.setAttribute('aria-label', ix.index + ', ' + ix.health + ', ' + fmtBytes(ix.size) + ', ' + fmtNum(ix.docs) + ' documents');
+    tipOn(b, ix.index + ': ' + fmtBytes(ix.size) + ' on disk, ' + fmtNum(ix.docs) + ' documents, ' + ix.pri + ' shard' + (ix.pri > 1 ? 's' : '') + ' × ' + (ix.rep + 1) + ' copies');
+    b.addEventListener('click', function () { selectIndex(ix.index); $('detail').scrollIntoView({behavior: 'smooth'}); });
+    box.append(b);
+  });
+  $('moreNote').textContent = '+ ' + C.moreIndexes + ' smaller indexes, and ' + C.systemIndexes + ' system indexes (names starting with a dot), are not shown.';
+  document.querySelectorAll('[data-sort]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.sort === state.sort)); });
+}
+
+// ---- index header ---------------------------------------------------
+function built(ix) {
+  if (!state.built[ix.index]) state.built[ix.index] = SE.buildIndex(ix.body, ix.documents || []);
+  return state.built[ix.index];
+}
+function selectIndex(name) {
+  state.index = name; state.open = null; state.resp = null; state.hit = 0;
+  var ix = cur();
+  var presets = C.presetsFor(name);
+  $('qsrc').value = JSON.stringify(presets.length ? presets[0].q : {query: {match_all: {}}}, null, 2);
+  renderTop(); renderHead(); renderTab();
+  if (ix.documents) runQuery();
+}
+function renderHead() {
+  var ix = cur();
+  $('iname').textContent = ix.index;
+  $('iabout').textContent = ix.about;
+  document.querySelectorAll('.cur').forEach(function (s) { s.textContent = ix.index; });
+  var f = $('facts'); f.replaceChildren();
+  var fact = function (v, k) { var d = el('div', 'fact'); d.append(el('b', '', v), document.createTextNode(k)); f.append(d); };
+  var h = el('div', 'fact'), hs = el('span', 'health ' + ix.health); hs.append(el('i'), document.createTextNode(ix.health)); h.append(el('b', '', ix.health === 'green' ? 'healthy' : 'check'), hs); f.append(h);
+  fact(fmtNum(ix.docs), 'documents');
+  fact(fmtBytes(ix.size), 'on disk');
+  fact(ix.pri + ' × ' + (ix.rep + 1), 'shards × copies');
+  fact(String(Lx.listFields(ix.body.mappings, (ix.body.settings || {}).analysis || {}).filter(function (x) { return x.kind !== 'object'; }).length), 'fields');
+}
+
+// ---- tabs -----------------------------------------------------------
+function renderTab() {
+  ['fields', 'settings', 'explain'].forEach(function (t) {
+    $('tab-' + t).setAttribute('aria-selected', String(state.tab === t));
+    $('pane-' + t).hidden = state.tab !== t;
+  });
+  if (state.tab === 'fields') renderFields();
+  if (state.tab === 'settings') renderSettings();
+  if (state.tab === 'explain') renderExplain();
+}
+
+// ---- fields ---------------------------------------------------------
+var PLAIN = {html_strip: 'HTML removed', mapping: 'symbols swapped', standard: 'cut into words', whitespace: 'cut at spaces', keyword: 'kept whole',
+  lowercase: 'small letters', asciifolding: 'accents removed', stop: 'little words removed', stemmer: 'cut to the root', keyword_marker: 'some words protected',
+  synonym: 'synonyms added', synonym_graph: 'synonyms added', word_delimiter_graph: 'split at hyphens', edge_ngram: 'first letters saved', ngram: 'small pieces saved'};
+function plainChain(c) {
+  var s = [].concat(c.charFilters, [c.tokenizer], c.filters).map(function (p) {
+    if (p.def.type === 'stemmer' && p.def.language === 'possessive_english') return "'s removed";
+    return PLAIN[p.def.type] || p.def.type;
+  }).join(', then ');
+  return s.charAt(0).toUpperCase() + s.slice(1) + '.';
+}
+function pipeEl(c) {
+  var p = el('div', 'pipe');
+  var add = function (part, cls) { if (p.childNodes.length) p.append(el('span', 'arr', '→')); var pill = el('span', 'pill ' + cls, part.name); pill.title = Lx.describe(cls === 'c' ? 'char' : cls === 't' ? 'tokenizer' : 'filter', part.def.type); p.append(pill); };
+  c.charFilters.forEach(function (x) { add(x, 'c'); }); add(c.tokenizer, 't'); c.filters.forEach(function (x) { add(x, 'f'); });
+  return p;
+}
+function chips(toks) {
+  var box = el('div', 'chips');
+  if (!toks.length) box.append(el('span', 'none', 'no tokens'));
+  toks.forEach(function (t) { box.append(el('span', 'chip' + (t.type === 'SYNONYM' ? ' added' : t.keyword ? ' kept' : ''), t.token)); });
+  return box;
+}
+function otherSay(type) {
+  if (/date/.test(type)) return 'A date. Found by exact day or a date range.';
+  if (type === 'boolean') return 'Yes or no.';
+  if (type === 'geo_point') return 'A place on the map. Found by distance.';
+  if (type === 'nested') return 'A list of small objects, each searched on its own.';
+  if (type === 'object') return 'A group of fields.';
+  return 'A number. Found by exact value or a range.';
+}
+function renderFields() {
+  var ix = cur(), analysis = (ix.body.settings || {}).analysis || {};
+  var fields = Lx.listFields(ix.body.mappings, analysis);
+  var count = {text: 0, keyword: 0, other: 0};
+  fields.forEach(function (f) { if (count[f.kind] !== undefined) count[f.kind]++; });
+  var k = $('kinds'); k.replaceChildren();
+  [['text', 'searched by words', 'Text is cut into tokens. Use match queries.'], ['keyword', 'exact values', 'Kept whole. Good for filters, sorting and counting.'], ['other', 'numbers, dates and more', 'Found by exact value or by range.']].forEach(function (x) {
+    var d = el('div', 'kind ' + x[0]); d.append(el('b', '', String(count[x[0]])), el('span', '', x[1])); d.append(el('span', 'hint', x[2])); k.append(d);
+  });
+  var t = $('ftable'); t.replaceChildren();
+  var sample = (ix.documents || [])[0];
+  fields.forEach(function (f) {
+    var depth = f.path.split('.').length - 1;
+    var can = f.kind === 'text' || f.kind === 'keyword';
+    var row = el(can ? 'button' : 'div', 'frow');
+    var fn = el('span', 'fn'); if (depth) fn.append(el('span', 'ind', '└ '.padStart(depth * 2 + 2, ' ')));
+    fn.append(document.createTextNode(f.path.split('.').pop()));
+    if (f.parent) fn.append(el('span', 'hint', 'extra way to save ' + f.parent));
+    row.append(fn, el('span', 'ttag ' + f.kind, f.type));
+    var say = el('span', 'say');
+    if (f.kind === 'text') { var c = Lx.chainFor(f, 'index', analysis); say.append(document.createTextNode(c.error ? c.error : plainChain(c))); if (!c.error) say.append(pipeEl(c)); }
+    else if (f.kind === 'keyword') say.textContent = f.normalizer ? 'Kept whole, with normalizer "' + f.normalizer + '" (case does not matter).' : 'Kept whole, exactly as written ("Nike" ≠ "nike").';
+    else say.textContent = otherSay(f.type);
+    row.append(say);
+    if (can) {
+      row.setAttribute('aria-expanded', String(state.open === f.path));
+      row.addEventListener('click', function () { state.open = state.open === f.path ? null : f.path; renderFields(); });
+    }
+    t.append(row);
+    if (can && state.open === f.path) {
+      var box = el('div', 'tryit');
+      var val = sample ? [].concat(sample._source[(f.parent || f.path)] || '')[0] : '';
+      var inp = el('input'); inp.type = 'text'; inp.value = val ? String(val) : 'Running Shoes for Men';
+      inp.setAttribute('aria-label', 'Text to try on ' + f.path);
+      var out = el('div');
+      var draw = function () {
+        out.replaceChildren();
+        var ic = Lx.chainFor(f, 'index', analysis), sc = f.kind === 'text' ? Lx.chainFor(f, 'search', analysis) : ic;
+        var a = el('div', 'side'); a.append(el('span', '', 'saved as'), chips(Lx.finalTokens(Lx.analyze(inp.value, ic)))); out.append(a);
+        if (f.kind === 'text' && JSON.stringify(sc) !== JSON.stringify(ic)) {
+          var b2 = el('div', 'side'); b2.append(el('span', '', 'searched as'), chips(Lx.finalTokens(Lx.analyze(inp.value, sc)))); out.append(b2);
+        }
+      };
+      inp.addEventListener('input', draw);
+      var lab = el('span', 'hint', 'Type anything to see the tokens. Taken from the first document:');
+      box.append(lab, inp, out); draw();
+      var link = el('a', 'hint', 'Test this field with 100 searches in the Mapping lab →'); link.href = 'mapping-lab.html'; box.append(link);
+      t.append(box);
+      setTimeout(function () { inp.focus(); }, 0);
+    }
+  });
+  $('rawMapping').textContent = JSON.stringify(ix.body.mappings, null, 2);
+}
+
+// ---- settings -------------------------------------------------------
+function renderSettings() {
+  var ix = cur(), s = ix.body.settings || {};
+  var copies = ix.rep + 1;
+  $('shardSay').textContent = 'The index is cut into ' + ix.pri + ' part' + (ix.pri > 1 ? 's' : '') + ' (shards). Each part is kept ' + copies + ' times: one main copy (dark) and ' + ix.rep + ' backup cop' + (ix.rep === 1 ? 'y' : 'ies') + ' (light), always on different servers.';
+  var nodes = C.nodes.map(function (n) { return {name: n, shards: []}; });
+  var unassigned = [];
+  for (var i = 0; i < ix.pri; i++) {
+    nodes[i % nodes.length].shards.push({t: 'p', n: i});
+    for (var r = 0; r < ix.rep; r++) {
+      if (ix.unassigned && r >= ix.rep - ix.unassigned) { unassigned.push(i); continue; }
+      nodes[(i + 1 + r) % nodes.length].shards.push({t: 'r', n: i});
+    }
+  }
+  var box = $('nodes'); box.replaceChildren();
+  nodes.forEach(function (n) {
+    var d = el('div', 'node'), h = el('h4');
+    h.append(svgServer(), document.createTextNode(n.name)); d.append(h);
+    var sh = el('div', 'sh');
+    if (!n.shards.length) sh.append(el('span', 'none', 'no part of this index'));
+    n.shards.forEach(function (x) { var b = el('div', 'shard ' + x.t, (x.t === 'p' ? 'P' : 'R') + x.n); tipOn(b, (x.t === 'p' ? 'Main copy' : 'Backup copy') + ' of part ' + x.n); sh.append(b); });
+    d.append(sh); box.append(d);
+  });
+  var u = $('unassigned'); u.replaceChildren();
+  if (unassigned.length) {
+    var w = el('div', 'unassigned');
+    unassigned.forEach(function (n) { w.append(el('div', 'shard u', 'R' + n)); });
+    w.append(el('span', '', 'Not placed: no server has room for this backup copy. That is why the index is yellow. Search still works, but if a server stops, data could be lost. Real call: GET _cluster/allocation/explain'));
+    u.append(w);
+  }
+  var cards = $('scards'); cards.replaceChildren();
+  var card = function (k, v, say) { var d = el('div', 'scard'); d.append(el('div', 'k', k), el('div', 'v', String(v)), el('p', '', say)); cards.append(d); };
+  card('number_of_shards', s.number_of_shards || 1, 'Cut into ' + (s.number_of_shards || 1) + ' part' + ((s.number_of_shards || 1) > 1 ? 's' : '') + '. A search asks every part at the same time. Cannot be changed later without copying the data.');
+  card('number_of_replicas', s.number_of_replicas === undefined ? 1 : s.number_of_replicas, 'Backup copies of each part. They also answer searches, so more copies can handle more searches.');
+  card('refresh_interval', s.refresh_interval || '1s', 'A new document can be found after about ' + (s.refresh_interval || '1s') + '. Longer means faster saving, but slower to see new data.');
+  card('max_result_window', s.max_result_window || 10000, 'You can page down to result number ' + fmtNum(s.max_result_window || 10000) + '. Deeper paging needs search_after.');
+  var an = $('anlist'); an.replaceChildren();
+  var analysis = s.analysis || {}, names = Object.keys(analysis.analyzer || {});
+  if (!names.length) an.append(el('p', 'sub', 'None. This index uses only built-in analyzers (like standard and english).'));
+  names.forEach(function (n) {
+    var c = Lx.resolveAnalyzer(n, analysis), d = el('div', 'an');
+    d.append(el('b', '', n), el('p', '', c.error || plainChain(c)));
+    if (!c.error) d.append(pipeEl(c));
+    an.append(d);
+  });
+  $('rawSettings').textContent = JSON.stringify(s, null, 2);
+}
+function svgServer() {
+  var ns = 'http://www.w3.org/2000/svg', s = document.createElementNS(ns, 'svg');
+  s.setAttribute('width', '18'); s.setAttribute('height', '18'); s.setAttribute('viewBox', '0 0 18 18'); s.setAttribute('aria-hidden', 'true');
+  [[2, 2], [2, 10]].forEach(function (p) { var r = document.createElementNS(ns, 'rect'); r.setAttribute('x', p[0]); r.setAttribute('y', p[1]); r.setAttribute('width', 14); r.setAttribute('height', 6); r.setAttribute('rx', 1.5); r.setAttribute('fill', 'none'); r.setAttribute('stroke', '#586376'); r.setAttribute('stroke-width', '1.5'); s.append(r); });
+  return s;
+}
+
+// ---- search and explain ---------------------------------------------
+function renderExplain() {
+  var ix = cur(), p = $('presets'); p.replaceChildren();
+  C.presetsFor(ix.index).forEach(function (pr) {
+    var b = el('button', 'small', pr.name);
+    b.addEventListener('click', function () { $('qsrc').value = JSON.stringify(pr.q, null, 2); runQuery(); });
+    p.append(b);
+  });
+  if (!ix.documents) {
+    $('results').replaceChildren(el('div', 'nodocs', 'This prototype has no sample documents for "' + ix.index + '". Try products, reviews or a logs index. The real tool searches your real data.'));
+    $('plainQ').replaceChildren();
+    return;
+  }
+  renderResults();
+}
+
+function runQuery() {
+  var ix = cur(); $('qerr').textContent = '';
+  if (!ix.documents) return renderExplain();
+  var body;
+  try { body = JSON.parse($('qsrc').value); }
+  catch (e) { var p = Lx.readIndexJson('{}'); var err = jsonWhere($('qsrc').value); $('qerr').textContent = 'The query is not valid JSON. ' + err; return; }
+  var idx = built(ix);
+  try {
+    state.resp = SE.search(idx, ix.index, body);
+    state.body = body; state.hit = 0; state.colors = {};
+    var pq = $('plainQ'); pq.replaceChildren();
+    SE.describeQuery(body, idx).forEach(function (s) { pq.append(el('li', '', s)); });
+  } catch (e) {
+    if (e instanceof SE.QueryError) { $('qerr').textContent = e.msg; state.resp = null; renderResults(); return; }
+    throw e;
+  }
+  var w = $('warnings'); w.replaceChildren();
+  state.resp._lens.warnings.forEach(function (x) { w.append(el('p', 'warnings', x)); });
+  renderResults();
+}
+function jsonWhere(text) {
+  var r = Lx.readIndexJson(text);
+  return r.error && r.error.line ? 'Line ' + r.error.line + ', column ' + r.error.col + ': ' + r.error.msg : '';
+}
+
+function colorFor(key) {
+  if (!state.colors[key]) {
+    var used = Object.keys(state.colors).length;
+    state.colors[key] = used < SLOTS.length ? SLOTS[used] : 'var(--other)';
+  }
+  return state.colors[key];
+}
+
+function renderResults() {
+  var box = $('results'); box.replaceChildren();
+  var r = state.resp;
+  if (!r) return;
+  var hits = r.hits.hits;
+  // assign colours in a fixed order: by first appearance in the top hit, then the next ones
+  hits.forEach(function (h) { SE.readExplanation(h._explanation).parts.forEach(function (p) { if (!p.constant) colorFor(p.field + ':' + p.term); }); });
+
+  var grid = el('div', 'rgrid'), left = el('div'), right = el('div');
+  var head = el('div', 'rhead');
+  var big = el('span', 'big'); big.append(el('b', '', String(r.hits.total.value)), document.createTextNode(' of ' + r._lens.docCount + ' sample documents matched'));
+  head.append(big, el('span', 'hint', 'took ' + r.took + ' ms'));
+  left.append(head);
+  var keys = Object.keys(state.colors);
+  if (keys.length) {
+    var tl = el('div', 'terms'); tl.setAttribute('aria-label', 'Colour of each word in the score bars');
+    keys.forEach(function (k) { var s = el('span'), i = el('i'); i.style.background = state.colors[k]; s.append(i, document.createTextNode(k)); tl.append(s); });
+    left.append(tl);
+  }
+  if (!hits.length) left.append(el('div', 'nodocs', 'No document matched. Open "Why the others did not match" below to see the reason for each one.'));
+  var max = r.hits.max_score || 1;
+  hits.forEach(function (h, i) {
+    var b = el('button', 'hit'); b.setAttribute('aria-pressed', String(i === state.hit));
+    b.append(el('span', 'rk', '#' + (i + 1)));
+    var body = el('div');
+    body.append(highlight(h), el('div', 'meta', metaLine(h._source)));
+    var sb = el('div', 'sbar'), tr = el('div', 'track');
+    var ex = SE.readExplanation(h._explanation);
+    var counted = ex.parts.filter(function (p) { return p.counted && p.value > 0; });
+    if (!counted.length) body.append(el('span', 'zero', h._score === 0 ? 'Score 0: only filters were used, so every match is equal.' : 'Score from a constant part'));
+    counted.forEach(function (p) {
+      var s = el('span'); s.style.width = (100 * p.value / max) + '%';
+      s.style.background = p.constant ? 'var(--other)' : colorFor(p.field + ':' + p.term);
+      tipOn(s, (p.constant ? p.desc : p.field + ':' + p.term) + ' adds ' + p.value.toFixed(2));
+      tr.append(s);
+    });
+    tr.style.width = (100 * h._score / max) + '%'; tr.style.flex = 'none';
+    var holder = el('div'); holder.style.flex = '1'; holder.append(tr);
+    sb.append(holder, el('code', '', h._score.toFixed(2)));
+    if (counted.length) body.append(sb);
+    b.append(body);
+    b.addEventListener('click', function () { state.hit = i; renderResults(); });
+    left.append(b);
+  });
+  var nm = r._lens.notMatched;
+  if (nm.length) {
+    var d = el('details', 'misses'); d.append(el('summary', '', 'Why the others did not match (' + nm.length + ')'));
+    nm.forEach(function (m) { var x = el('div', 'miss'); x.append(el('b', '', m._source.title || m._source.text || m._source.message || m._id), el('span', '', m.reasons.join(' '))); d.append(x); });
+    left.append(d);
+  }
+  var raw = el('details', 'raw'); raw.append(el('summary', '', 'Show the raw _search answer'));
+  raw.append(el('pre', 'code', JSON.stringify({took: r.took, timed_out: false, hits: r.hits}, null, 2)));
+  left.append(raw);
+
+  if (hits[state.hit]) right.append(whyPanel(hits[state.hit], state.hit));
+  grid.append(left, right); box.append(grid);
+}
+
+function metaLine(s) {
+  if (s.brand) return s.brand + ' · ' + (s.price !== undefined ? s.price.toFixed(2) + ' €' : '') + (s.category ? ' · ' + s.category : '');
+  if (s.rating !== undefined) return '★ ' + s.rating + ' · ' + s.author + ' · product ' + s.product_id;
+  if (s.level) return s.level + ' · ' + s.service + ' · ' + s['@timestamp'];
+  return '';
+}
+function titleField(src) { return src.title !== undefined ? 'title' : src.text !== undefined ? 'text' : 'message'; }
+function highlight(h) {
+  var f = titleField(h._source), text = String(h._source[f] || h._id), out = el('div', 't');
+  var idx = built(cur()), terms = new Set(), fields = new Set([f]);
+  (h._lens.terms || []).forEach(function (t) { if (t.field === f || t.field.indexOf(f + '.') === 0) { terms.add(t.term); fields.add(t.field); } });
+  var marks = [];
+  fields.forEach(function (fp) {
+    var info = idx.fields[fp], i = idx.docs.findIndex(function (d) { return d._id === h._id; });
+    var e = info && info.perDoc[i];
+    if (e) e.tokens.forEach(function (t) { if (terms.has(t.token)) marks.push([t.start_offset, t.end_offset]); });
+  });
+  marks.sort(function (a, b) { return a[0] - b[0]; });
+  var pos = 0;
+  marks.forEach(function (m) {
+    if (m[0] < pos) return;
+    out.append(document.createTextNode(text.slice(pos, m[0])), el('mark', '', text.slice(m[0], m[1])));
+    pos = m[1];
+  });
+  out.append(document.createTextNode(text.slice(pos)));
+  return out;
+}
+
+function whyPanel(h, rank) {
+  var p = el('div', 'why'), ex = SE.readExplanation(h._explanation);
+  p.append(el('h3', '', 'Why #' + (rank + 1) + ': ' + (h._source.title || h._source.text || h._source.message)));
+  var tot = el('p', 'total'); tot.append(document.createTextNode('Score '), el('b', '', h._score.toFixed(2)));
+  p.append(tot);
+  var counted = ex.parts.filter(function (x) { return x.counted && x.value > 0; });
+  if (counted.length) {
+    var eq = el('div', 'eq'); eq.setAttribute('role', 'img');
+    eq.setAttribute('aria-label', 'Score parts: ' + counted.map(function (x) { return (x.constant ? x.desc : x.term) + ' ' + x.value.toFixed(2); }).join(', '));
+    counted.forEach(function (x) {
+      var s = el('span', '', x.value / h._score > 0.12 ? (x.constant ? 'const' : x.term) : '');
+      s.style.flex = String(x.value); s.style.background = x.constant ? 'var(--other)' : colorFor(x.field + ':' + x.term);
+      tipOn(s, (x.constant ? x.desc : x.field + ':' + x.term) + ' = ' + x.value.toFixed(2)); eq.append(s);
+    });
+    p.append(eq, el('p', 'eqtxt', counted.map(function (x) { return (x.constant ? x.desc : x.term) + ' ' + x.value.toFixed(2); }).join(' + ') + ' = ' + h._score.toFixed(2)));
+  }
+  if (ex.filters.length) {
+    p.append(el('p', 'hint', 'Filters it passed (they decide yes or no, and add nothing to the score):'));
+    var pf = el('div', 'passed'); ex.filters.forEach(function (f) { pf.append(el('span', '', '✓ ' + f)); }); p.append(pf);
+  }
+  var lost = ex.parts.filter(function (x) { return !x.counted; });
+  ex.parts.filter(function (x) { return x.counted; }).concat(lost).forEach(function (x, i) {
+    if (x === lost[0]) p.append(el('p', 'lostnote', 'Also found, but not counted: with best_fields only the best field adds to the score.'));
+    var c = el('div', 'part' + (x.counted ? '' : ' lost'));
+    c.style.borderLeftColor = x.constant ? 'var(--other)' : colorFor(x.field + ':' + x.term);
+    if (x.constant) {
+      var hh = el('h4'); hh.append(el('span', '', 'A fixed part: ' + x.desc), el('code', '', x.value.toFixed(2))); c.append(hh);
+      c.append(el('p', 'hint', 'Range, terms and match_all parts in "must" add a fixed 1, not a word score.'));
+      p.append(c); return;
+    }
+    var h4 = el('h4'), lab = el('span'); lab.append(document.createTextNode('The word '), el('code', '', x.term), document.createTextNode(' in ' + x.field));
+    h4.append(lab, el('code', '', '+' + x.value.toFixed(2))); c.append(h4);
+    var userBoost = x.boost / (SE.K1 + 1);
+    var row = function (label, small, value, say) { var f = el('div', 'factor'), l = el('span', 'fl', label); l.append(el('small', '', small)); var s = el('span', 'fx'); s.append(el('b', '', value), document.createTextNode('  ' + say)); f.append(l, s); c.append(f); };
+    if (x.idf) row('How rare the word is', 'idf', x.idf.value.toFixed(2), '"' + x.term + '" is in ' + x.idf.n + ' of ' + x.idf.N + ' documents. Rare words count more than common ones.');
+    if (x.tf) row('How much it fills the field', 'tf', x.tf.value.toFixed(2), x.tf.norms
+      ? 'Found ' + x.tf.freq + ' time' + (x.tf.freq > 1 ? 's' : '') + ' in a field of ' + x.tf.dl + ' words (the average is ' + x.tf.avgdl.toFixed(1) + '). Short fields count more.'
+      : 'Found ' + x.tf.freq + ' time' + (x.tf.freq > 1 ? 's' : '') + '. This field has no length rule, so its length does not matter.');
+    row('Boost', 'boost', x.boost.toFixed(2), userBoost > 1.001 ? 'You asked this field to count ' + +userBoost.toFixed(2) + '× (' + +userBoost.toFixed(2) + ' × the normal 2.2).' : '2.2 is the normal value (k1 + 1). You did not add a boost.');
+    c.append(el('div', 'formula', x.boost.toFixed(2) + ' × ' + (x.idf ? x.idf.value.toFixed(2) : '?') + ' × ' + (x.tf ? x.tf.value.toFixed(2) : '?') + ' = ' + x.value.toFixed(2)));
+    p.append(c);
+  });
+  var raw = el('details', 'raw'); raw.append(el('summary', '', 'Show the raw _explanation'));
+  raw.append(el('pre', 'code', JSON.stringify(h._explanation, null, 2))); p.append(raw);
+
+  var ask = el('button', 'askai', 'Ask AI to explain this');
+  ask.disabled = !state.ai;
+  ask.addEventListener('click', function () { openDrawer(h, rank); });
+  p.append(ask);
+  p.append(el('p', 'aihint', state.ai ? 'Opens a panel. Nothing is sent until you press Send.' : 'AI help is off. Turn it on with "AI help" in the top bar.'));
+  return p;
+}
+
+// ---- AI help ----------------------------------------------------------
+var DEFAULT_PROMPT = 'You help a person who is new to search engines.\n' +
+  'Answer the question in simple English, with short sentences. Explain each technical word once.\n' +
+  'Then give at most two changes to the query or the mapping that would help, and say what each one costs.\n\n' +
+  'Question: {{question}}\n\nThe document is result {{rank}}.\n\nQuery:\n{{query}}\n\nFields used:\n{{fields}}\n\nScore explanation from OpenSearch:\n{{explanation}}';
+var ai = {hit: null, rank: 0};
+
+function setAi(on) {
+  state.ai = on;
+  var t = $('aiToggle'); t.setAttribute('aria-pressed', String(on)); t.textContent = 'AI help: ' + (on ? 'on' : 'off');
+  t.title = on ? 'AI help is on. Click to turn it off.' : 'AI help is off. Click to turn it on.';
+  if (!on) $('drawer').hidden = true;
+  renderResults();
+}
+function openDrawer(h, rank) {
+  ai.hit = h; ai.rank = rank;
+  $('aiQuestion').value = 'Why is "' + (h._source.title || h._source.text || h._id) + '" result number ' + (rank + 1) + '?';
+  $('aiAnswer').hidden = true;
+  $('drawer').hidden = false; preview(); $('aiQuestion').focus();
+}
+function fieldsUsed() {
+  var ix = cur(), analysis = (ix.body.settings || {}).analysis || {}, used = new Set();
+  JSON.stringify(state.body || {}).replace(/"([\w.@]+)"\s*:/g, function (m, k) { used.add(k); return m; });
+  JSON.stringify(state.body || {}).replace(/"([\w.@]+)(\^[\d.]+)?"/g, function (m, k) { used.add(k); return m; });
+  return Lx.listFields(ix.body.mappings, analysis).filter(function (f) { return used.has(f.path); }).map(function (f) {
+    var out = f.path + ': ' + f.type;
+    if (f.kind === 'text') { out += ', analyzer ' + f.indexAnalyzer; if (f.searchAnalyzer !== f.indexAnalyzer) out += ', search_analyzer ' + f.searchAnalyzer; var c = Lx.chainFor(f, 'index', analysis); if (!c.error) out += ' (' + plainChain(c) + ')'; }
+    if (f.normalizer) out += ', normalizer ' + f.normalizer;
+    return out;
+  }).join('\n');
+}
+function filled() {
+  return $('aiPrompt').value
+    .split('{{question}}').join($('aiQuestion').value)
+    .split('{{rank}}').join('#' + (ai.rank + 1) + ' of ' + state.resp.hits.total.value)
+    .split('{{query}}').join(JSON.stringify(state.body, null, 2))
+    .split('{{fields}}').join(fieldsUsed() || '(none)')
+    .split('{{explanation}}').join(JSON.stringify(ai.hit._explanation, null, 1));
+}
+function preview() {
+  if (!ai.hit) return;
+  var text = filled();
+  $('aiPreview').textContent = text;
+  $('sendSize').textContent = 'Show exactly what will be sent (' + fmtNum(text.length) + ' characters, about ' + fmtNum(Math.ceil(text.length / 4)) + ' tokens)';
+}
+function fakeAnswer() {
+  var h = ai.hit, ex = SE.readExplanation(h._explanation);
+  var parts = ex.parts.filter(function (x) { return x.counted && !x.constant; }).sort(function (a, b) { return b.value - a.value; });
+  var lines = [];
+  lines.push('This document is number ' + (ai.rank + 1) + ' with a score of ' + h._score.toFixed(2) + '. The score is the sum of a few small parts, one for each word that was found.');
+  if (parts[0]) lines.push('\nThe biggest part (' + parts[0].value.toFixed(2) + ') comes from the word "' + parts[0].term + '" in ' + parts[0].field + '. ' +
+    (parts[0].idf && parts[0].idf.n <= parts[0].idf.N / 3 ? 'This word is rare: only ' + parts[0].idf.n + ' of ' + parts[0].idf.N + ' documents have it, so it counts a lot.' : 'Many documents have this word, so it does not count very much on its own.'));
+  var weak = parts.filter(function (x) { return x.idf && x.idf.n > x.idf.N / 2; });
+  if (weak.length) lines.push('\nWords like "' + weak.map(function (x) { return x.term; }).join('", "') + '" are in most documents. They add only a little, because they do not help to tell documents apart.');
+  var short = parts.find(function (x) { return x.tf && x.tf.norms && x.tf.dl < x.tf.avgdl; });
+  if (short) lines.push('\nThe ' + short.field + ' is short (' + short.tf.dl + ' words, the average is ' + short.tf.avgdl.toFixed(1) + '). In a short field, each word counts more.');
+  if (ex.filters.length) lines.push('\nThe filters (' + ex.filters.join(', ') + ') only decide yes or no. They do not change the order.');
+  lines.push('\nWhat you could change:\n1. Add a boost to the field that matters most, for example "title^3". Cost: other fields matter less.\n2. If an important word is too common to help, add a "should" part that matches a field like brand or category. Cost: one more clause to keep up to date.');
+  return lines.join('');
+}
+$('aiToggle').addEventListener('click', function () {
+  if (state.ai) { setAi(false); return; }
+  var d = $('aiDialog');
+  if (d.showModal) d.showModal(); else setAi(true);
+});
+$('aiYes').addEventListener('click', function () { $('aiDialog').close(); setAi(true); });
+$('aiNo').addEventListener('click', function () { $('aiDialog').close(); });
+$('closeDrawer').addEventListener('click', function () { $('drawer').hidden = true; });
+['aiPrompt', 'aiQuestion'].forEach(function (id) { $(id).addEventListener('input', preview); });
+$('aiSend').addEventListener('click', function () {
+  var a = $('aiAnswer'); a.hidden = false; a.replaceChildren();
+  a.append(el('span', 'lbl3', 'Prototype answer: written by this page from the score data. No AI was called and nothing left this page.'));
+  var txt = fakeAnswer(), node = document.createTextNode(''), i = 0;
+  a.append(node);
+  var tick = setInterval(function () { i += 6; node.textContent = txt.slice(0, i); if (i >= txt.length) clearInterval(tick); }, 16);
+});
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('drawer').hidden) $('drawer').hidden = true; });
+
+// ---- events -----------------------------------------------------------
+document.querySelectorAll('[data-sort]').forEach(function (b) { b.addEventListener('click', function () { state.sort = b.dataset.sort; renderTop(); }); });
+['fields', 'settings', 'explain'].forEach(function (t) { $('tab-' + t).addEventListener('click', function () { state.tab = t; renderTab(); }); });
+$('run').addEventListener('click', runQuery);
+$('qsrc').addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runQuery(); } });
+
+// ---- start ------------------------------------------------------------
+$('conn').append(document.createTextNode('Connected · ' + C.name + ' · ' + C.version));
+$('aiPrompt').value = DEFAULT_PROMPT;
+selectIndex('products');
+</script>
+</body>
+</html>

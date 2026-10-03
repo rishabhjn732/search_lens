@@ -24,6 +24,26 @@ Ideas that do not have a spec yet. Use `/spec-new <name>` to start one.
   Use them as a starting point for the spec's error cases.
   Open question: how entities map to OpenSearch (for example a `synonym_graph` rule
   `ai supplychain => ai_supplychain`, or a phrase query).
+- **mapping-lab** (next new spec, 007): the user pastes an index definition (`settings` +
+  `mappings`). The tool draws each field (which steps save it, which steps search it), runs a
+  built-in set of 100 test searches in 10 lessons (plurals, case, accents, hyphens, numbers,
+  stop words, synonyms, typos, half-typed words, symbols) against every text and keyword field,
+  shows found / partly / not found with a one-line reason and the fix that would help, and shows
+  the `PUT /<index>` body to copy. Decided by the user (2026-10-03): the tool never creates the
+  index (read-only); analysis uses `POST /_analyze` with the analyzer parts inline, so it needs a
+  connected cluster but creates nothing. Prototype: `prototypes/lab/mapping-lab.html`
+  (engine `analyzer.js`, tests `samples.js`). Open: filters that read files from disk
+  (`synonyms_path`, Hunspell) cannot be sent inline; how many `_analyze` calls are allowed at once
+  (100 tests x fields x 2 sides); are the user's own tests kept after a reload.
+- **ai-helper** (spec 008, build last): an "Ask AI to explain" button next to a score explanation.
+  Off by default; a switch in the top bar turns it on after a warning. Sends the query, the fields
+  it uses, and one `_explanation` to Claude, with a prompt the user can edit and a preview of
+  exactly what is sent. The API key lives in page memory only, like the cluster password. The AI
+  only explains; it never calls the cluster. Prototype: the drawer in
+  `prototypes/lab/index-explorer.html` (answers are made by the page, no AI is called).
+  Open: browser-only means the browser calls the Anthropic API directly (needs the
+  `anthropic-dangerous-direct-browser-access` header; the key is visible in dev tools); is the
+  edited prompt saved in `localStorage` (it is not secret); cost limits.
 - **why-not-matched**: paste a document id that you expected to see, and the tool shows which
   part of the query failed for it.
 - **compare-queries**: run two queries side by side and show which documents moved up or down.
