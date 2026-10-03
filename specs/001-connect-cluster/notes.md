@@ -96,4 +96,102 @@ A new session reads this file to continue the work. Newest entry at the bottom.
 - For the next session:
   - R5.5 (reduce motion) and R5.7 (narrow window) are CSS only; check them by hand (task 10).
   - Compare the page with `prototypes/home/a-clean-lab.html` by hand; it was not screenshotted.
-  - Next task: 4, Read-only guard.
+
+## Task 4: Read-only guard (R3.1, R3.2)
+
+- Built: `frontend/src/opensearch/guard.ts` with `isAllowed(method, path)`. Allow-list copied from
+  `.claude/skills/opensearch-api/reference.md` ("Read-only guard" section): `GET`/`HEAD` always;
+  `POST` only when the path (query string stripped) ends with `_search`, `_msearch`, `_count`,
+  `_analyze`, `_validate/query`, `_search/template`, `_render/template`, `_field_caps`,
+  `_termvectors`, `_mtermvectors`, `_rank_eval`, or matches `_explain/<doc_id>`. `PUT`, `DELETE`,
+  `PATCH` always refused. Method check is case-insensitive.
+  Tests: `guard.test.ts`, 22 tests, one per allowed suffix plus refused cases. All 84 project
+  tests still pass.
+- Branch: this task was started on a new branch `001-connect-cluster` (from `main`), because the
+  session had been left on `007-mapping-lab` (a different spec).
+## Task 5: Cluster client and errors (R1.2 to R1.6, R2.2, R2.3)
+
+- Built: `frontend/src/opensearch/errors.ts` (`ClusterError { code, message, status?, body? }` plus one
+  builder function per code, exact messages from the design's error table) and `client.ts`
+  (`createClusterClient({ url, username, password })` → `{ request, connect }`). `request` checks
+  the guard first, builds the full URL with `new URL(path, baseUrl)` (path only, so it cannot be
+  pointed elsewhere), sends `Authorization: Basic ...` from a closure, `credentials: "omit"`, and a
+  5 second `AbortController` timeout; maps 401/403/other non-2xx/abort/fetch-throw to the right
+  `ClusterError`. `connect()` calls `GET /` then `GET /_cluster/health` and returns the combined
+  facts. Password is never a field on the client, so `JSON.stringify` cannot show it.
+  Tests: `client.test.ts`, 10 tests (one per error row, headers, credentials, facts, password safety).
+- For the next session: Next task: 6, Connection provider.
+
+## Task 6: Connection provider (R1.1, R1.7, R2.1, R2.4, R4.2, R4.3)
+
+- Built: `frontend/src/components/ConnectionProvider.tsx`. React context holding `state`
+  (`not_connected`/`connecting`/`connected`/`lost`), `facts`, and the client in a `useRef` (never in
+  state, so it is not serialised). `connect(details)` creates the client, awaits `client.connect()`,
+  on failure goes back to `not_connected` and rethrows (the screen shows the message). `disconnect()`
+  forgets the client and facts. `request()` proxies to the client and moves to `lost` if a call fails
+  with `unreachable` or `timeout`. A `setInterval` (15 s) while `connected` repeats the health check
+  and also moves to `lost` on the same two error codes.
+  Tests: `ConnectionProvider.test.tsx`, 6 tests. Fake timers + `vi.advanceTimersByTimeAsync` for the
+  15 s check; used direct state checks after `act()` instead of RTL `waitFor` (that mixed badly with
+  fake timers and hung the test for 5 s).
+- For the next session: Next task: 7, Connect screen.
+
+## Task 7: Connect screen (R1.1 to R1.7, R2.2, R3.3)
+
+- Built: `frontend/src/screens/Connect/ConnectScreen.tsx` + `connect.css`, replacing
+  `ConnectPlaceholder.tsx` (deleted). Form (URL, username, password), read-only tip (R3.3) always
+  shown, Connect button disabled and labelled "Connecting…" while `state === 'connecting'` (R1.7).
+  Password state is cleared the instant Connect is chosen, win or lose (R2.2). On failure shows
+  `error.message`; `unreachable` and `timeout` get an extra cause list (R1.4), `unreachable`'s list
+  includes a link to open the cluster URL. On success shows cluster name, distribution, version,
+  node count and health, from `facts` (R1.1). `App.tsx` now wraps the routes in `ConnectionProvider`
+  and uses `ConnectScreen` instead of the placeholder.
+  Tests: `ConnectScreen.test.tsx`, 9 tests (empty, working, success, R1.2/R1.3/R1.5/R1.6 errors,
+  R1.4 cause list, password cleared). The `timeout` test uses fake timers
+  (`vi.advanceTimersByTimeAsync(5000)`) instead of a real 5 second wait.
+  `npm run build` (tsc + vite) passes.
+- For the next session: Next task: 8, Connection badge and disconnect.
+
+## Task 8: Connection badge and disconnect (R4.1, R4.2, R4.3)
+
+- Built: `frontend/src/components/ConnectionBadge.tsx` + `.css`, placed in `AppHeader.tsx` (the old
+  placeholder comment is gone). Renders nothing in `not_connected`/`connecting`. In `connected`:
+  cluster name, a coloured health word (`health-green`/`health-yellow`/`health-red` classes from
+  `facts.status`), and a Disconnect button that calls `disconnect()` and navigates to `/connect`
+  (R4.1, R4.2). In `lost`: "Connection lost" and a "Connect again" button, same disconnect+navigate
+  action (R4.3).
+  Tests: `ConnectionBadge.test.tsx`, 4 tests, using a small test harness component (exposes
+  `connect()` from context) inside a `MemoryRouter` with a `/connect` stub route, to check the
+  badge's states and that Disconnect/Connect again really navigate there.
+  Full suite: 113/113 tests pass; `npm run build` passes.
+- Branch note: this and tasks 4 to 7 were all done on `001-connect-cluster` (branched from `main`),
+  not `007-mapping-lab` which the session had been left on.
+- For the next session:
+  - Tasks 4 to 8 are all done. Remaining: task 9 (CORS settings on the practice cluster's
+    `dev/docker-compose.yml`, needs Docker) and task 10 (manual check against the practice cluster
+    in a real browser) — both need the user's own machine, not done in this session.
+  - Nothing was checked by hand yet: connecting to a real cluster, a wrong password, the cluster
+    stopped, an untrusted certificate, and CORS turned off (design's "By hand" list) still need a
+    real run with `npm run dev` against the practice cluster.
+
+## Spec change: optional username and password (R1.8, R1.9)
+
+- The user wants to connect to their own cluster directly (not the `dev/` practice cluster, so
+  task 9's Docker/CORS setup is on hold), and that cluster may have no security plugin, so there is
+  no username or password to give.
+- `requirements.md`, `design.md`, `tasks.md` were put back to `draft`, R1.1 no longer requires
+  username/password, R1.8 and R1.9 were added, and the user approved all three back to `approved`
+  in the same conversation (R1.9: "Enter both username and password, or leave both empty.").
+- Built: `errors.ts` got `credentials_incomplete`. `client.ts`'s `createClusterClient` now throws
+  `credentials_incomplete` before any call when only one of username/password is filled in, and
+  sends no `Authorization` header at all when both are empty. `ConnectScreen.tsx` dropped
+  `required` from the username/password inputs and added a hint ("leave empty if the cluster needs
+  no login"); no other screen logic changed, since the new error is shown the same way as the
+  others already were.
+  Tests: 3 new in `client.test.ts`, 2 new in `ConnectScreen.test.tsx`. Full suite 118/118 pass;
+  `npm run build` passes.
+- For the next session:
+  - Still on hold, needs the user's own machine: task 9 (practice cluster CORS, if they go back to
+    using `dev/`) and task 10 (manual check in a real browser — now against their own cluster,
+    possibly with no login at all).
+  - Nothing has been committed to git yet.

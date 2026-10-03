@@ -1,4 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
+import ConnectionBadge from './ConnectionBadge';
 import './AppHeader.css';
 
 export default function AppHeader() {
@@ -21,7 +22,7 @@ export default function AppHeader() {
           <NavLink to="/word-lists">Word lists</NavLink>
           <NavLink to="/connect">Connect</NavLink>
         </nav>
-        {/* ConnectionBadge goes here (spec 001, task 8). */}
+        <ConnectionBadge />
       </div>
     </header>
   );

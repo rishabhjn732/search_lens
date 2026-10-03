@@ -52,6 +52,16 @@ This folder is the only code that calls the cluster. Components never call `fetc
 | `guard.ts` | `isAllowed(method, path)`, from `.claude/skills/opensearch-api/reference.md`, section "Read-only guard". |
 | `errors.ts` | `ClusterError` with `code` and `message`, and one function that builds each exact message. |
 
+### Username and password are optional
+
+Some practice and local clusters have no security plugin, so there is nothing to log in with.
+
+- If both username and password are left empty, `createClusterClient` sends no `Authorization`
+  header at all (R1.8).
+- If only one of the two is filled in, `createClusterClient` throws `credentials_incomplete`
+  before any call is made, same as `invalid_url` (R1.9).
+- If both are filled in, nothing changes from before.
+
 ### How the password is kept
 
 - `createClusterClient` turns the username and password into the `Authorization: Basic ...` header
@@ -74,6 +84,7 @@ This folder is the only code that calls the cluster. Components never call `fetc
 | `fetch` throws (wrong address, network, untrusted certificate, or CORS) | `unreachable` | "Cannot reach the cluster at <url>." |
 | The guard refuses the call | `read_only` | "Search Lens is read-only. This call would change the cluster." |
 | Any other answer that is not 2xx | `cluster_error` | "The cluster answered with error <status>." The cluster's own error body is kept on the error, so a screen can draw it. |
+| Only one of username or password is filled in | `credentials_incomplete` | "Enter both username and password, or leave both empty." |
 
 Browsers do not tell a web page why a call failed, so the four causes of `unreachable` cannot be
 told apart. The connect screen lists all of them with what to do (R1.4).
@@ -167,7 +178,9 @@ All tests use a fake `fetch` (`vi.stubGlobal`). No test calls a real cluster.
 - Guard: every allowed method and path, and refused ones (`PUT`, `DELETE`, `PATCH`, `POST` to a
   write API). A refused call never reaches `fetch`.
 - Client: each row of the error table, with the exact message; the `Authorization` header is sent;
-  `credentials` is `omit`; the 5 second timeout; `connect()` returns the facts from the two answers.
+  `credentials` is `omit`; the 5 second timeout; `connect()` returns the facts from the two answers;
+  no `Authorization` header when username and password are both empty; `credentials_incomplete`
+  when only one is filled in.
 - Password: after connect and after each error, the password is not in any error message, not in
   `JSON.stringify` of the client or the error, not in `console` calls, and not in `localStorage`,
   `sessionStorage` or `document.cookie`.
@@ -194,6 +207,8 @@ All tests use a fake `fetch` (`vi.stubGlobal`). No test calls a real cluster.
 | R1.5 | `invalid_url` check before any call |
 | R1.6 | error mapping `forbidden` |
 | R1.7 | `connecting` state, button disabled |
+| R1.8 | `createClusterClient` sends no `Authorization` header when both fields are empty |
+| R1.9 | error mapping `credentials_incomplete`, checked before any call |
 | R2.1 | client in `ConnectionProvider` memory only |
 | R2.2 | header in a closure, no storage, no console, password tests |
 | R2.3 | `request` takes a path on the entered URL only, `credentials: "omit"` |

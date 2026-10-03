@@ -4,7 +4,8 @@ Status: approved
 
 ## Summary
 
-The user gives the address of an OpenSearch cluster, a username and a password.
+The user gives the address of an OpenSearch cluster, and a username and password if the
+cluster needs one.
 The tool checks that it can talk to the cluster and shows basic facts about it.
 After that, every other screen uses this connection. The tool never changes the cluster.
 The tool runs only in the browser and talks to the cluster directly (decided 2026-10-03).
@@ -14,13 +15,13 @@ The tool opens on a home page that explains what it does and leads to the connec
 
 ### R1. Connect
 
-As a search engineer, I want to connect with a URL, username and password,
-so that I can inspect my cluster.
+As a search engineer, I want to connect with a URL, and a username and password only if my
+cluster needs one, so that I can inspect my cluster.
 
 Acceptance criteria:
 
-- R1.1 WHEN the user enters a URL, username and password and chooses Connect
-  THE SYSTEM SHALL check the cluster and show its name, version, number of nodes and health status.
+- R1.1 WHEN the user enters a URL and chooses Connect THE SYSTEM SHALL check the cluster and
+  show its name, version, number of nodes and health status.
 - R1.2 WHEN the username or password is wrong THE SYSTEM SHALL show
   "The username or password is wrong." and stay on the connect screen.
 - R1.3 WHEN the cluster does not answer within 5 seconds THE SYSTEM SHALL show
@@ -36,6 +37,10 @@ Acceptance criteria:
   THE SYSTEM SHALL show "This user is not allowed to read cluster information."
 - R1.7 WHILE the check is running THE SYSTEM SHALL show that it is working
   and not accept a second Connect.
+- R1.8 WHEN the username and the password are both left empty THE SYSTEM SHALL connect without
+  sending a login header, for a cluster that does not require one.
+- R1.9 WHEN only one of username or password is filled in THE SYSTEM SHALL show
+  "Enter both username and password, or leave both empty." and not call the cluster.
 
 ### R2. Keep the password safe
 
