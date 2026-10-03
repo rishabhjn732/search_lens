@@ -23,3 +23,13 @@ analyzer the `title` field uses. The developer opens the overview, clicks the in
 - Nested and object fields: shown as a tree, or as a flat list with dotted names?
 - When is the data loaded again? Only on a Refresh button, or by itself?
 - What does the user see when they are not allowed to read one of the APIs?
+
+## Added by the user (2026-10-03)
+
+- Start with the **10 biggest indexes** (by size, switch to sort by documents), as a bar chart,
+  with health shown as a word and a dot. Smaller and system indexes are counted, not listed.
+- After choosing an index: its **fields** as a tree with a plain sentence per field and the
+  analyzer steps as coloured pills, a "try it" box per field, and its **settings** as pictures
+  (shards and copies on each server, unassigned copies in red, key settings in plain words).
+- On the same page, a tab to **search and explain** (see 004).
+- Prototype: `prototypes/lab/index-explorer.html`, tabs "Fields" and "Settings".
