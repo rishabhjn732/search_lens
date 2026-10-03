@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search Lens · Home page options</title>
+<style>
+body{margin:0;background:#E9ECF2;color:#18202F;font-family:system-ui,sans-serif}
+.wrap{max-width:1500px;margin:0 auto;padding:28px 24px 60px}
+h1{margin:0 0 4px;font-size:1.7rem}
+p{margin:0 0 24px;color:#586376}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+figure{margin:0;background:#fff;border:1px solid #D3D9E5;border-radius:12px;overflow:hidden}
+.frame{height:560px;overflow:hidden;position:relative}
+iframe{width:250%;height:250%;border:0;transform:scale(.4);transform-origin:0 0;pointer-events:none}
+figcaption{padding:14px 16px;border-top:1px solid #D3D9E5}
+figcaption b{display:block;font-size:1.1rem}
+figcaption span{color:#586376;font-size:.92rem}
+figcaption a{display:inline-block;margin-top:10px;font-weight:700;color:#0F6F93}
+@media (max-width:1000px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Home page: pick one design</h1>
+  <p>Three options. Click "Open full page" to see one at real size. Tell Claude which letter you like, or mix parts ("A, but with the lens from B").</p>
+  <div class="grid">
+    <figure>
+      <div class="frame"><iframe src="a-clean-lab.html" title="Design A preview" tabindex="-1"></iframe></div>
+      <figcaption><b>A · Clean lab</b><span>Light and calm. Same colours and fonts as the token playground. The demo card plays the steps of one query.</span><br><a href="a-clean-lab.html">Open full page →</a></figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><iframe src="b-night-lens.html" title="Design B preview" tabindex="-1"></iframe></div>
+      <figcaption><b>B · Night lens</b><span>Dark and techy. A glowing lens moves over products and shows the matching words and scores.</span><br><a href="b-night-lens.html">Open full page →</a></figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><iframe src="c-pipeline.html" title="Design C preview" tabindex="-1"></iframe></div>
+      <figcaption><b>C · Pipeline</b><span>Warm and editorial. A five-box diagram lights up: query → analyzer → index → score → results.</span><br><a href="c-pipeline.html">Open full page →</a></figcaption>
+    </figure>
+  </div>
+</div>
+</body>
+</html>

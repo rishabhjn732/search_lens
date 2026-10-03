@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search Lens · Home (A: Clean lab)</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Design A: light and calm. Same colours and fonts as token-playground.html. */
+:root{
+  --board:#F3F5FA; --panel:#FFFFFF; --ink:#18202F; --muted:#586376; --line:#D3D9E5;
+  --blue:#0F6F93; --yellow:#8A5A00; --green:#35721A; --red:#B93226;
+  --blue-bg:#DDF1F8; --yellow-bg:#FFF2C9; --green-bg:#E3F2D8; --red-bg:#FBE3E0;
+  --sans:'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--board);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+/* top bar */
+header{border-bottom:1px solid var(--line);background:var(--panel)}
+header .wrap{display:flex;align-items:center;gap:16px;height:64px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem;text-decoration:none}
+nav{margin-left:auto;display:flex;gap:22px;color:var(--muted);font-size:.95rem}
+nav a{text-decoration:none}
+nav a:hover{color:var(--ink)}
+.badge{font-family:var(--mono);font-size:.78rem;padding:4px 10px;border-radius:99px;border:1px solid var(--line);color:var(--muted);display:flex;align-items:center;gap:6px}
+.badge i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+
+.btn{display:inline-block;font-family:var(--sans);font-size:1rem;font-weight:700;padding:12px 22px;border-radius:8px;border:1px solid var(--ink);text-decoration:none;cursor:pointer}
+.btn.primary{background:var(--ink);color:var(--board)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--muted)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1fr 1.1fr;gap:48px;align-items:center;padding:64px 0 56px}
+.eyebrow{font-family:var(--mono);font-size:.82rem;color:var(--blue);margin:0 0 12px}
+h1{font-size:3rem;line-height:1.08;letter-spacing:-.02em;margin:0 0 18px}
+h1 mark{background:linear-gradient(transparent 60%,var(--yellow-bg) 60%);color:inherit}
+.lead{font-size:1.2rem;color:var(--muted);margin:0 0 28px;max-width:46ch}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+
+/* hero picture: a card that plays the story step by step */
+.demo{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:0 18px 40px -24px rgba(24,32,47,.35)}
+.demo .bar{display:flex;gap:6px;margin-bottom:16px}
+.demo .bar i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.step{display:grid;grid-template-columns:92px 1fr;gap:12px;align-items:center;padding:10px 0;border-top:1px dashed var(--line);opacity:0;animation:show 9s infinite}
+.step:first-of-type{border-top:0}
+.step .lbl{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:var(--mono);font-size:.95rem;padding:4px 10px;border:1.5px solid var(--line);border-radius:6px;background:var(--board)}
+.chip.y{border-color:var(--yellow);background:var(--yellow-bg)}
+.chip.r{border-color:var(--red);background:var(--red-bg);border-style:dashed;text-decoration:line-through}
+.chip.g{border-color:var(--green);background:var(--green-bg)}
+.query{font-family:var(--mono);font-size:1.05rem;padding:8px 12px;border:1px solid var(--line);border-radius:6px}
+.hit{display:flex;align-items:center;gap:12px}
+.hit .title{flex:1;font-size:.95rem}
+.hit .title b{background:var(--green-bg);border-radius:3px;padding:0 3px}
+.score{width:120px;height:10px;border-radius:5px;background:var(--board);overflow:hidden;border:1px solid var(--line)}
+.score span{display:block;height:100%;background:var(--blue);width:0;animation:grow 9s infinite}
+.score + code{font-family:var(--mono);font-size:.85rem;color:var(--blue);min-width:3.2em}
+.s1{animation-delay:0s}.s2{animation-delay:.8s}.s3{animation-delay:1.6s}.s4{animation-delay:2.4s}.s5{animation-delay:3.2s}
+.s5 .score span{animation-delay:3.2s}
+@keyframes show{0%{opacity:0;transform:translateY(6px)}6%,85%{opacity:1;transform:none}95%,100%{opacity:0}}
+@keyframes grow{0%,5%{width:0}20%,85%{width:78%}95%,100%{width:0}}
+
+/* sections */
+section{padding:56px 0}
+h2{font-size:1.9rem;letter-spacing:-.01em;margin:0 0 8px}
+.sub{color:var(--muted);margin:0 0 32px;max-width:60ch}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 18px;text-decoration:none;display:flex;flex-direction:column;gap:10px;transition:transform .2s,border-color .2s}
+.card:hover{transform:translateY(-3px);border-color:var(--muted)}
+.card .num{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.card h3{margin:0;font-size:1.1rem}
+.card p{margin:0;color:var(--muted);font-size:.92rem}
+.card svg{width:44px;height:44px}
+
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;counter-reset:s}
+.how div{border-top:3px solid var(--ink);padding-top:14px}
+.how div::before{counter-increment:s;content:"Step " counter(s);font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.how h3{margin:4px 0 6px}
+.how p{margin:0;color:var(--muted)}
+
+.safe{display:flex;gap:18px;align-items:center;background:var(--green-bg);border:1px solid var(--green);border-radius:12px;padding:20px 24px}
+.safe svg{flex:none}
+.safe p{margin:0}
+footer{border-top:1px solid var(--line);color:var(--muted);font-size:.9rem;padding:24px 0;margin-top:24px}
+
+/* hero background: dotted paper + floating token chips */
+.hero{position:relative}
+.hero::before{content:"";position:absolute;inset:-20px -40px;z-index:-1;background:radial-gradient(var(--line) 1.2px,transparent 1.3px) 0 0/22px 22px;mask-image:radial-gradient(ellipse at 70% 50%,#000 20%,transparent 70%)}
+.float{position:absolute;font-family:var(--mono);font-size:.8rem;padding:3px 9px;border-radius:6px;border:1.5px solid;background:var(--panel);animation:bob 6s ease-in-out infinite;z-index:-1}
+.f1{top:22px;right:4%;border-color:var(--green);color:var(--green)}
+.f2{bottom:30px;left:47%;border-color:var(--yellow);color:var(--yellow);animation-delay:-2s}
+.f3{top:46%;right:-6px;border-color:var(--blue);color:var(--blue);animation-delay:-4s}
+@keyframes bob{50%{transform:translateY(-10px) rotate(-3deg)}}
+
+/* word lists section */
+.lists{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:28px}
+.drop.bad{border-style:solid;border-color:var(--red)}
+.drop .file.bad{color:var(--red);font-family:var(--sans);font-size:.88rem}
+.tag.p{background:#EEE6F8;color:#6B3FA0}
+.drop{position:relative;background:var(--panel);border:2px dashed var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s,background .2s}
+.drop:hover,.drop:focus-within{border-color:var(--blue);background:#FAFDFF}
+.drop.has{border-style:solid;border-color:var(--green)}
+.drop .top{display:flex;align-items:center;gap:12px}
+.drop h3{margin:0;font-size:1.08rem}
+.drop .what{margin:0;color:var(--muted);font-size:.92rem}
+.drop pre{margin:0;font-family:var(--mono);font-size:.8rem;background:var(--board);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--ink);white-space:pre-wrap}
+.drop pre .c{color:var(--muted)}
+.drop label{display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;padding:10px;border-radius:8px;border:1px solid var(--line);cursor:pointer;background:var(--board)}
+.drop label:hover{border-color:var(--muted)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.drop .file{font-family:var(--mono);font-size:.8rem;color:var(--green);min-height:1.2em;margin:0}
+.drop .tag{position:absolute;top:14px;right:14px;font-family:var(--mono);font-size:.7rem;padding:2px 8px;border-radius:99px}
+.tag.y{background:var(--yellow-bg);color:var(--yellow)}
+.tag.b{background:var(--blue-bg);color:var(--blue)}
+.tag.g{background:var(--green-bg);color:var(--green)}
+
+.compare{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.compare .head{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.compare .head b{font-family:var(--mono)}
+.compare .head span{color:var(--muted);font-size:.9rem}
+.cmp-row{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center;padding:16px 20px}
+.cmp-row + .cmp-row{border-top:1px dashed var(--line)}
+.cmp-row .who{font-weight:700}
+.cmp-row .who small{display:block;font-weight:400;color:var(--muted);font-size:.8rem}
+.arrow{color:var(--muted);font-family:var(--mono)}
+.chip.b{border-color:var(--blue);background:var(--blue-bg)}
+.chip .why{display:block;font-family:var(--sans);font-size:.68rem;color:var(--muted)}
+.cmp-row.with .chip{opacity:0;animation:pop 8s infinite}
+.cmp-row.with .chip:nth-child(2){animation-delay:.3s}
+.cmp-row.with .chip:nth-child(3){animation-delay:.6s}
+.cmp-row.with .chip:nth-child(4){animation-delay:.9s}
+@keyframes pop{0%{opacity:0;transform:scale(.8)}8%,88%{opacity:1;transform:none}100%{opacity:0}}
+.legend{display:flex;gap:18px;flex-wrap:wrap;padding:12px 20px;border-top:1px solid var(--line);background:var(--board);font-size:.85rem;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px;border:1.5px solid}
+.note{font-size:.88rem;color:var(--muted);margin:14px 0 0}
+
+/* score breakdown picture in "how it works" */
+.explain{margin-top:28px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px}
+.explain h3{margin:0 0 14px;font-size:1.05rem}
+.sb{display:grid;grid-template-columns:170px 1fr 60px;gap:12px;align-items:center;margin-bottom:10px;font-size:.92rem}
+.sb .track{height:14px;background:var(--board);border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.sb .track span{display:block;height:100%;border-radius:7px}
+.sb code{font-family:var(--mono);text-align:right}
+.sb.total{border-top:1px solid var(--line);padding-top:10px;font-weight:700}
+
+@media (max-width:900px){
+  .lists{grid-template-columns:1fr}
+  .cmp-row,.sb{grid-template-columns:1fr}
+  .float{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .float,.cmp-row.with .chip{animation:none;opacity:1}
+  .drop{transition:none}
+}
+
+@media (max-width:900px){
+  .hero{grid-template-columns:1fr}
+  .cards{grid-template-columns:1fr 1fr}
+  .how{grid-template-columns:1fr}
+  nav{display:none}
+  h1{font-size:2.3rem}
+}
+@media (prefers-reduced-motion:reduce){
+  .step,.score span{animation:none;opacity:1}
+  .score span{width:78%}
+  .card{transition:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="logo" href="#">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="#18202F" stroke-width="2.5"/><line x1="18" y1="18" x2="25" y2="25" stroke="#18202F" stroke-width="3" stroke-linecap="round"/><circle cx="12" cy="12" r="3" fill="#0F6F93"/></svg>
+      Search Lens
+    </a>
+    <nav aria-label="Main">
+      <a href="#screens">Screens</a><a href="a-word-lists.html">Word lists</a><a href="#how">How it works</a><a href="#safe">Safety</a>
+    </nav>
+    <span class="badge"><i></i>Not connected</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <span class="float f1" aria-hidden="true">shoe</span>
+    <span class="float f2" aria-hidden="true">synonym</span>
+    <span class="float f3" aria-hidden="true">_score</span>
+    <div>
+      <p class="eyebrow">For OpenSearch</p>
+      <h1>See <mark>why</mark> a document matched your search.</h1>
+      <p class="lead">Search Lens shows how your query becomes tokens, which documents match, and how each score is built. Step by step, in pictures.</p>
+      <div class="cta">
+        <a class="btn primary" href="#">Connect to a cluster</a>
+        <a class="btn ghost" href="#how">See how it works</a>
+      </div>
+    </div>
+
+    <div class="demo" aria-label="Example: the query Running Shoes! becomes the tokens run and shoe, and matches a product">
+      <div class="bar"><i></i><i></i><i></i></div>
+      <div class="step s1"><span class="lbl">query</span><span class="query">Running Shoes!</span></div>
+      <div class="step s2"><span class="lbl">split</span><div class="chips"><span class="chip">Running</span><span class="chip">Shoes</span><span class="chip r">!</span></div></div>
+      <div class="step s3"><span class="lbl">lowercase</span><div class="chips"><span class="chip y">running</span><span class="chip y">shoes</span></div></div>
+      <div class="step s4"><span class="lbl">stem</span><div class="chips"><span class="chip g">run</span><span class="chip g">shoe</span></div></div>
+      <div class="step s5"><span class="lbl">top hit</span><div class="hit"><span class="title"><b>Run</b>Fast trail <b>shoe</b>, size 42</span><span class="score"><span></span></span><code>7.84</code></div></div>
+    </div>
+  </div>
+
+  <section id="screens">
+    <h2>Five screens, one job</h2>
+    <p class="sub">Each screen answers one question you have when search does not behave.</p>
+    <div class="cards">
+      <a class="card" href="#"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="12" width="36" height="20" rx="5" fill="#DDF1F8" stroke="#0F6F93" stroke-width="2"/><circle cx="14" cy="22" r="3" fill="#0F6F93"/><line x1="21" y1="22" x2="34" y2="22" stroke="#0F6F93" stroke-width="2"/></svg><span class="num">01</span><h3>Connect</h3><p>Enter the cluster URL, user and password.</p></a>
+      <a class="card" href="#"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="5" y="6" width="14" height="14" rx="3" fill="#E3F2D8" stroke="#35721A" stroke-width="2"/><rect x="25" y="6" width="14" height="14" rx="3" fill="#E3F2D8" stroke="#35721A" stroke-width="2"/><rect x="5" y="24" width="14" height="14" rx="3" fill="#E3F2D8" stroke="#35721A" stroke-width="2"/><rect x="25" y="24" width="14" height="14" rx="3" fill="#FFF2C9" stroke="#8A5A00" stroke-width="2"/></svg><span class="num">02</span><h3>Cluster overview</h3><p>Indexes, mappings, templates, nodes and health.</p></a>
+      <a class="card" href="#"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="3" y="15" width="11" height="14" rx="3" fill="#FFF2C9" stroke="#8A5A00" stroke-width="2"/><rect x="17" y="15" width="11" height="14" rx="3" fill="#FFF2C9" stroke="#8A5A00" stroke-width="2"/><rect x="31" y="15" width="10" height="14" rx="3" fill="#FBE3E0" stroke="#B93226" stroke-width="2" stroke-dasharray="3 2"/></svg><span class="num">03</span><h3>Token playground</h3><p>Watch the analyzer cut and change your text.</p></a>
+      <a class="card" href="#"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="5" y="8" width="30" height="6" rx="3" fill="#0F6F93"/><rect x="5" y="19" width="22" height="6" rx="3" fill="#0F6F93" opacity=".7"/><rect x="5" y="30" width="13" height="6" rx="3" fill="#0F6F93" opacity=".45"/></svg><span class="num">04</span><h3>Query lab</h3><p>Run a query and see how each score was built.</p></a>
+      <a class="card" href="#"><svg viewBox="0 0 44 44" aria-hidden="true"><polyline points="3,30 11,24 18,28 25,14 32,20 41,8" fill="none" stroke="#B93226" stroke-width="2.5" stroke-linejoin="round"/><line x1="3" y1="38" x2="41" y2="38" stroke="#D3D9E5" stroke-width="2"/></svg><span class="num">05</span><h3>Load monitor</h3><p>Live CPU, memory, search queue and running searches.</p></a>
+    </div>
+  </section>
+
+  <section id="lists">
+    <h2>Bring your own word lists</h2>
+    <p class="sub">Add your entities, protected words, synonyms and a Hunspell dictionary. Search Lens checks each file, saves it in this browser, and uses it when it analyzes your text and your query. Nothing is saved on the cluster.</p>
+    <div class="lists">
+      <div class="drop">
+        <span class="tag p">entity</span>
+        <div class="top"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="12" width="34" height="16" rx="5" fill="#EEE6F8" stroke="#6B3FA0" stroke-width="2"/><line x1="20" y1="15" x2="20" y2="25" stroke="#6B3FA0" stroke-width="2" stroke-dasharray="2 2"/></svg><h3>Entities</h3></div>
+        <p class="what">Phrases kept as one token. Example: <code>ai supplychain</code> matches only as the exact phrase.</p>
+        <pre><span class="c"># entity.txt, one phrase per line</span>
+ai supplychain
+machine learning
+new york</pre>
+        <label>Choose file <input type="file" accept=".txt" data-type="entity"></label>
+        <p class="file" role="status"></p>
+      </div>
+      <div class="drop">
+        <span class="tag y">keyword_marker</span>
+        <div class="top"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect x="7" y="17" width="26" height="18" rx="4" fill="#FFF2C9" stroke="#8A5A00" stroke-width="2"/><path d="M13 17 V12 a7 7 0 0 1 14 0 V17" fill="none" stroke="#8A5A00" stroke-width="2.5"/><circle cx="20" cy="26" r="2.5" fill="#8A5A00"/></svg><h3>Protected words</h3></div>
+        <p class="what">Words the stemmer must not change. Example: keep <code>iPhone</code> as it is.</p>
+        <pre><span class="c"># protected.txt, one word per line</span>
+iphone
+adidas
+running</pre>
+        <label>Choose file <input type="file" accept=".txt" data-type="protected"></label>
+        <p class="file" role="status"></p>
+      </div>
+      <div class="drop">
+        <span class="tag b">synonym</span>
+        <div class="top"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="8" width="16" height="11" rx="3" fill="#DDF1F8" stroke="#0F6F93" stroke-width="2"/><rect x="21" y="21" width="16" height="11" rx="3" fill="#DDF1F8" stroke="#0F6F93" stroke-width="2"/><path d="M22 13 h9 l-3 -3 M18 27 h-9 l3 3" fill="none" stroke="#0F6F93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>Synonyms</h3></div>
+        <p class="what">Words that mean the same thing. Example: <code>sneakers</code> also finds <code>running shoes</code>.</p>
+        <pre><span class="c"># synonyms.txt, Solr format</span>
+sneakers, running shoes
+tv =&gt; television
+mobile, cell phone</pre>
+        <label>Choose file <input type="file" accept=".txt" data-type="synonym"></label>
+        <p class="file" role="status"></p>
+      </div>
+      <div class="drop">
+        <span class="tag g">hunspell</span>
+        <div class="top"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><path d="M6 8 h12 a3 3 0 0 1 3 3 V34 a3 3 0 0 0 -3 -3 H6 Z M34 8 h-12 a3 3 0 0 0 -3 3 V34 a3 3 0 0 1 3 -3 H34 Z" fill="#E3F2D8" stroke="#35721A" stroke-width="2" stroke-linejoin="round"/></svg><h3>Hunspell dictionary</h3></div>
+        <p class="what">A real dictionary for stemming. Example: <code>ran</code> becomes <code>run</code>.</p>
+        <pre><span class="c"># two files for one language</span>
+en_US.aff   <span class="c">rules</span>
+en_US.dic   <span class="c">words</span></pre>
+        <label>Choose .aff and .dic <input type="file" accept=".aff,.dic" multiple data-type="hunspell"></label>
+        <p class="file" role="status"></p>
+      </div>
+    </div>
+
+    <div class="compare" role="img" aria-label="The query iPhone sneakers. Without word lists it becomes iphon and sneaker. With word lists it becomes iphone, sneakers, running and shoes.">
+      <div class="head"><span>Query</span><b>iPhone sneakers</b><span>· same text, two results</span></div>
+      <div class="cmp-row">
+        <span class="who">Without lists<small>standard + stemmer</small></span>
+        <div class="chips"><span class="chip">iphon<span class="why">stemmed, wrong</span></span><span class="chip">sneaker<span class="why">stemmed</span></span></div>
+      </div>
+      <div class="cmp-row with">
+        <span class="who">With your lists<small>+ protected, synonyms</small></span>
+        <div class="chips"><span class="chip y">iphone<span class="why">protected</span></span><span class="chip g">sneakers<span class="why">kept</span></span><span class="chip b">running<span class="why">synonym</span></span><span class="chip b">shoes<span class="why">synonym</span></span></div>
+      </div>
+      <div class="legend"><span><i style="border-color:var(--yellow);background:var(--yellow-bg)"></i>protected word</span><span><i style="border-color:var(--blue);background:var(--blue-bg)"></i>added by a synonym</span><span><i style="border-color:var(--green);background:var(--green-bg)"></i>changed by Hunspell</span></div>
+    </div>
+    <p class="note">Your files stay in Search Lens. They are sent inside each analyze request, never saved to the cluster. <a href="a-word-lists.html">See all saved word lists →</a></p>
+  </section>
+
+  <section id="how">
+    <h2>How it works</h2>
+    <p class="sub">Your browser never talks to the cluster. The Search Lens backend does it for you.</p>
+    <div class="how">
+      <div><h3>Connect</h3><p>Give the cluster address and login. The password stays in backend memory only.</p></div>
+      <div><h3>Ask a question</h3><p>Type some text or a query. For example: <code>running shoes</code>.</p></div>
+      <div><h3>Read the picture</h3><p>See the tokens, the matching words and each part of the score.</p></div>
+    </div>
+    <div class="explain" role="img" aria-label="Score of RunFast trail shoe is 7.84: run gives 4.61 and shoe gives 3.23">
+      <h3>Example: why "RunFast trail shoe" scored 7.84</h3>
+      <div class="sb"><span>match <code>run</code></span><span class="track"><span style="width:59%;background:var(--blue)"></span></span><code>4.61</code></div>
+      <div class="sb"><span>match <code>shoe</code></span><span class="track"><span style="width:41%;background:var(--green)"></span></span><code>3.23</code></div>
+      <div class="sb total"><span>total score</span><span class="track"><span style="width:100%;background:var(--ink)"></span></span><code>7.84</code></div>
+    </div>
+  </section>
+
+  <section id="safe">
+    <div class="safe">
+      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3 L34 9 V19 C34 28 27 34 20 37 C13 34 6 28 6 19 V9 Z" fill="#fff" stroke="#35721A" stroke-width="2.5"/><polyline points="13,20 18,25 27,15" fill="none" stroke="#35721A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <p><b>Read-only. Always.</b> Search Lens only reads from your cluster. It never creates, changes or deletes anything.</p>
+    </div>
+  </section>
+</main>
+<footer><div class="wrap">Search Lens · prototype A, "Clean lab" · not production code</div></footer>
+<script src="wordlists.js"></script>
+<script>
+// Prototype only: check the file and save it in this browser (see wordlists.js).
+document.querySelectorAll('.drop input[type=file]').forEach(function (input) {
+  input.addEventListener('change', function () {
+    if (!input.files.length) return;
+    var type = input.dataset.type;
+    var drop = input.closest('.drop');
+    var out = drop.querySelector('.file');
+    WordLists.addFiles(type, input.files).then(function (r) {
+      input.value = '';
+      drop.classList.toggle('has', r.ok);
+      drop.classList.toggle('bad', !r.ok);
+      out.className = 'file' + (r.ok ? '' : ' bad');
+      out.replaceChildren();
+      if (r.ok) {
+        var t = WordLists.TYPES[type];
+        out.append('✓ ' + (r.replaced ? 'Replaced ' : 'Saved ') + r.name + ': ' + r.count + ' ' + (r.count === 1 ? t.one : t.many) +
+          (r.warnings.length ? ' (' + r.warnings.length + ' duplicate lines skipped)' : '') + '. ');
+        var a = document.createElement('a');
+        a.href = 'a-word-lists.html#' + type;
+        a.textContent = 'See it in Word lists →';
+        out.append(a);
+      } else {
+        var e = r.errors[0];
+        out.append('✕ Not saved. ' + (e.line ? 'Line ' + e.line + ': ' : '') + e.msg +
+          (r.errors.length > 1 ? ' (' + (r.errors.length - 1) + ' more problems)' : ''));
+      }
+    });
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Token playground</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --board:#F3F5FA; --panel:#FFFFFF; --ink:#18202F; --muted:#586376; --line:#D3D9E5;
+  --blue:#0F6F93; --yellow:#8A5A00; --green:#35721A; --red:#B93226;
+  --blue-bg:#DDF1F8; --yellow-bg:#FFF2C9; --green-bg:#E3F2D8; --red-bg:#FBE3E0;
+  --sans:'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --board:#1B2130; --panel:#232B3D; --ink:#ECEFF5; --muted:#9AA6BA; --line:#3A4560;
+    --blue:#58C4DD; --yellow:#F4D345; --green:#83C167; --red:#FC6255;
+    --blue-bg:rgba(88,196,221,.14); --yellow-bg:rgba(244,211,69,.14);
+    --green-bg:rgba(131,193,103,.16); --red-bg:rgba(252,98,85,.14);
+  }
+}
+:root[data-theme="dark"]{
+  --board:#1B2130; --panel:#232B3D; --ink:#ECEFF5; --muted:#9AA6BA; --line:#3A4560;
+  --blue:#58C4DD; --yellow:#F4D345; --green:#83C167; --red:#FC6255;
+  --blue-bg:rgba(88,196,221,.14); --yellow-bg:rgba(244,211,69,.14);
+  --green-bg:rgba(131,193,103,.16); --red-bg:rgba(252,98,85,.14);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--board);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding:28px 20px 56px}
+h1{font-size:2rem;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
+h2{font-size:1.15rem;margin:0 0 10px}
+.mode{color:var(--muted);margin:0 0 24px;max-width:68ch}
+
+.inputs{display:grid;grid-template-columns:2fr 1.2fr 1.4fr;gap:14px;margin-bottom:10px}
+.field label{display:block;font-weight:700;margin-bottom:2px}
+.field .hint{display:block;color:var(--muted);font-size:.85rem;margin-bottom:6px}
+.field input,.field select{width:100%;font-family:var(--mono);font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+.chain{font-family:var(--mono);font-size:.82rem;color:var(--muted);margin:0 0 14px;overflow-wrap:anywhere}
+.examples{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:26px}
+.examples span{color:var(--muted)}
+
+button{font-family:var(--sans);font-size:1rem;padding:8px 14px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--ink);color:var(--board);border-color:var(--ink);min-width:92px}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+.player{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.steps button{font-family:var(--mono);font-size:.82rem;padding:5px 10px;color:var(--muted)}
+.steps button.done{color:var(--ink)}
+.steps button[aria-current="step"]{color:var(--ink);border-color:var(--ink);border-width:2px;padding:4px 9px}
+
+.caption{min-height:5.2em;margin-bottom:14px;max-width:72ch}
+.caption .title{font-weight:700;font-size:1.05rem;margin:0}
+.caption .say{font-size:1.3rem;line-height:1.35;margin:2px 0 4px}
+.caption .count{color:var(--muted);margin:0}
+
+.board{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+.lane + .lane{border-left:1px solid var(--line)}
+.lane h2{margin:0;padding:12px 16px}
+.row{display:grid;grid-template-columns:112px 1fr;gap:10px;padding:12px 16px;border-top:1px dashed var(--line);align-items:start}
+.stage{font-family:var(--mono);font-size:.82rem;color:var(--muted);padding-top:8px;overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.chip{display:inline-flex;flex-direction:column;padding:5px 10px 4px;border:1.5px solid var(--line);border-radius:6px;background:var(--board);max-width:100%}
+.chip .tok{font-family:var(--mono);font-size:16px;font-weight:500;overflow-wrap:anywhere}
+.chip .sub{font-size:.72rem;color:var(--muted);line-height:1.3;overflow-wrap:anywhere}
+.chip.changed{border-color:var(--yellow);background:var(--yellow-bg)}
+.chip.changed .sub{color:var(--yellow)}
+.chip.added{border-color:var(--blue);background:var(--blue-bg)}
+.chip.added .sub{color:var(--blue)}
+.chip.removed{border-color:var(--red);border-style:dashed;background:var(--red-bg)}
+.chip.removed .tok{text-decoration:line-through}
+.chip.removed .sub{color:var(--red)}
+.chip.found{border-color:var(--green);background:var(--green-bg)}
+.chip.found .sub{color:var(--green)}
+.chip.missing{border-color:var(--red);border-style:dashed;background:var(--red-bg)}
+.chip.missing .sub{color:var(--red)}
+.rawtext{font-family:var(--mono);font-size:16px;padding:6px 0;overflow-wrap:anywhere}
+.rawtext.changed{color:var(--yellow)}
+.note{color:var(--muted);font-size:.9rem;padding:7px 0}
+
+.legend{display:flex;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:.85rem;margin:10px 2px 0}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;border:1.5px solid var(--line);vertical-align:-2px;margin-right:5px}
+.legend .l-changed{border-color:var(--yellow);background:var(--yellow-bg)}
+.legend .l-added{border-color:var(--blue);background:var(--blue-bg)}
+.legend .l-removed{border-color:var(--red);border-style:dashed;background:var(--red-bg)}
+
+#match{margin-top:26px}
+.mboard{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;row-gap:72px}
+.mboard svg{position:absolute;left:0;top:0;pointer-events:none}
+.mrow{display:grid;grid-template-columns:112px 1fr;gap:10px;align-items:start}
+.link{fill:none;stroke:var(--green);stroke-width:2;stroke-dasharray:1;stroke-dashoffset:0}
+.verdict{font-size:1.3rem;line-height:1.35;margin:14px 0 0;max-width:68ch}
+
+details{margin-top:30px}
+summary{cursor:pointer;font-weight:700}
+details p{color:var(--muted);max-width:72ch}
+pre{font-family:var(--mono);font-size:.8rem;line-height:1.45;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;overflow-x:auto;max-height:420px}
+
+@media (prefers-reduced-motion: no-preference){
+  .row.fresh .chip,.row.fresh .rawtext,.row.fresh .note{animation:drop .45s cubic-bezier(.2,.7,.2,1) both}
+  .link{animation:draw .6s ease-out both}
+}
+@keyframes drop{from{opacity:0;transform:translateY(-34px)}to{opacity:1;transform:none}}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+
+@media (max-width:820px){
+  .inputs{grid-template-columns:1fr}
+  .board{grid-template-columns:1fr}
+  .lane + .lane{border-left:0;border-top:1px solid var(--line)}
+  .row,.mrow{grid-template-columns:1fr;gap:4px}
+  .stage{padding-top:0}
+  .caption{min-height:0}
+  .caption .say,.verdict{font-size:1.15rem}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Token playground</h1>
+  <p class="mode">Sample mode. The analyzer runs inside this page, so no cluster is needed. The stemmer here is a simple copy, so a real cluster can give slightly different tokens.</p>
+
+  <div class="inputs">
+    <div class="field">
+      <label for="doc">Document text</label>
+      <span class="hint">The text saved in the index</span>
+      <input id="doc" type="text" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="field">
+      <label for="q">Search text</label>
+      <span class="hint">What the user types</span>
+      <input id="q" type="text" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="field">
+      <label for="an">Analyzer</label>
+      <span class="hint">The rules that cut and change the text</span>
+      <select id="an"></select>
+    </div>
+  </div>
+  <p class="chain" id="chain"></p>
+
+  <div class="examples" id="examples"><span>Try an example:</span></div>
+
+  <div class="player">
+    <button id="back">Back</button>
+    <button id="play" class="primary">Play</button>
+    <button id="next">Next</button>
+    <button id="restart">Start again</button>
+  </div>
+  <div class="steps" id="steps" aria-label="Steps"></div>
+
+  <div class="caption" aria-live="polite">
+    <p class="title" id="capTitle"></p>
+    <p class="say" id="capSay"></p>
+    <p class="count" id="capCount"></p>
+  </div>
+
+  <div class="board">
+    <section class="lane"><h2>Document text</h2><div id="laneDoc"></div></section>
+    <section class="lane"><h2>Search text</h2><div id="laneQ"></div></section>
+  </div>
+  <div class="legend">
+    <span><i></i>same as before</span>
+    <span><i class="l-changed"></i>changed</span>
+    <span><i class="l-added"></i>new token added</span>
+    <span><i class="l-removed"></i>removed</span>
+  </div>
+
+  <section id="match" hidden>
+    <h2>Compare the final tokens</h2>
+    <div class="mboard" id="matchBoard">
+      <svg id="links" aria-hidden="true"></svg>
+      <div class="mrow"><div class="stage">document</div><div class="chips" id="mDoc"></div></div>
+      <div class="mrow"><div class="stage">search</div><div class="chips" id="mSearch"></div></div>
+    </div>
+    <p class="verdict" id="verdict"></p>
+  </section>
+
+  <details>
+    <summary>Show the raw response for the document text</summary>
+    <p>This has the same shape as the answer from <code>POST /&lt;index&gt;/_analyze</code> with <code>"explain": true</code>. The real tool only needs to replace the sample analyzer with that API call.</p>
+    <pre id="raw"></pre>
+  </details>
+</div>
+
+<script>
+const STOP = new Set('a an and are as at be but by for if in into is it no not of on or such that the their then there these they this to was will with'.split(' '));
+const SYN = {sneakers:['shoes'], trainers:['shoes'], tv:['television'], mobile:['phone'], laptop:['notebook']};
+
+function stem(w){
+  if (w.length < 4) return w;
+  let s = w;
+  if (/sses$/.test(s)) s = s.slice(0,-2);
+  else if (/ies$/.test(s)) s = s.slice(0,-3) + 'i';
+  else if (/[^su]s$/.test(s)) s = s.slice(0,-1);
+  const hasVowel = x => /[aeiouy]/.test(x);
+  const m = /^(.+?)(ing|ed)$/.exec(s);
+  if (m && !/eed$/.test(s) && m[1].length >= 2 && hasVowel(m[1])) {
+    s = m[1];
+    if (/(at|bl|iz)$/.test(s)) s += 'e';
+    else if (/([^aeioulsz])\1$/.test(s)) s = s.slice(0,-1);
+  }
+  if (s.length > 2 && /y$/.test(s) && hasVowel(s.slice(0,-1))) s = s.slice(0,-1) + 'i';
+  return s;
+}
+
+const splitBy = re => text => {
+  const out = []; let m, i = 0;
+  while ((m = re.exec(text)) !== null) {
+    out.push({token:m[0], start_offset:m.index, end_offset:m.index + m[0].length, type:'<ALPHANUM>', position:i++});
+  }
+  return out;
+};
+const mapTok = fn => toks => toks.map(t => ({...t, token:fn(t.token)}));
+
+const STAGES = {
+  html_strip:{kind:'char', kindName:'character filter',
+    say:'Removes HTML tags like <b> from the text.',
+    run:t => t.replace(/<[^>]*>/g,'')},
+  standard:{kind:'tokenizer', kindName:'tokenizer',
+    say:'Cuts the text into words at spaces and punctuation marks.',
+    run:t => splitBy(/[\p{L}\p{N}]+(?:['\u2019][\p{L}\p{N}]+)*/gu)(t)},
+  lowercase:{kind:'filter', kindName:'token filter',
+    say:'Makes every letter small, so "Shoes" and "shoes" become the same word.',
+    run:mapTok(s => s.toLowerCase())},
+  asciifolding:{kind:'filter', kindName:'token filter',
+    say:'Removes accent marks, so "caf\u00e9" becomes "cafe".',
+    run:mapTok(s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,''))},
+  stop:{kind:'filter', kindName:'token filter',
+    say:'Removes very common words like "the" and "for". They do not help the search.',
+    run:toks => toks.filter(t => !STOP.has(t.token))},
+  synonym:{kind:'filter', kindName:'token filter',
+    say:'Adds words with the same meaning at the same position. "sneakers" also becomes "shoes".',
+    run:toks => toks.flatMap(t => [t, ...(SYN[t.token] || []).map(s => ({...t, token:s, type:'SYNONYM'}))])},
+  stemmer:{kind:'filter', kindName:'token filter',
+    say:'Cuts each word to its root, so "running" and "runs" both become "run".',
+    run:mapTok(stem)},
+  edge_ngram:{kind:'filter', kindName:'token filter',
+    say:'Keeps the first 2 to 5 letters of each word, so typing "run" can find "running".',
+    run:toks => toks.flatMap(t => {
+      const out = [];
+      for (let n = 2; n <= Math.min(5, t.token.length); n++) out.push({...t, token:t.token.slice(0,n)});
+      return out;
+    })}
+};
+
+const ANALYZERS = {
+  standard:{label:'standard', index:['standard','lowercase']},
+  english:{label:'english (simplified)', index:['standard','lowercase','stop','stemmer']},
+  product:{label:'product_search (custom)', index:['html_strip','standard','lowercase','asciifolding','synonym','stemmer']},
+  autocomplete:{label:'autocomplete (index) + standard (search)', index:['standard','lowercase','edge_ngram'], search:['standard','lowercase']}
+};
+const EXAMPLES = [
+  {name:'Plural words', doc:'Running Shoes for Men', q:'shoe', an:'english'},
+  {name:'Stop words', doc:'The Lord of the Rings', q:'lord of rings', an:'english'},
+  {name:'Synonyms and accents', doc:'<b>Nike</b> Sneakers, caf\u00e9 edition', q:'nike shoes cafe', an:'product'},
+  {name:'Autocomplete', doc:'Running Shoes', q:'run sho', an:'autocomplete'}
+];
+
+function analyze(text, chain){
+  let t = text, tokens = [], tokenizer = null;
+  const charfilters = [], tokenfilters = [];
+  const copy = a => a.map(x => ({...x}));
+  for (const name of chain) {
+    const st = STAGES[name];
+    if (st.kind === 'char') { t = st.run(t); charfilters.push({name, filtered_text:[t]}); }
+    else if (st.kind === 'tokenizer') { tokens = st.run(t); tokenizer = {name, tokens:copy(tokens)}; }
+    else { tokens = st.run(tokens); tokenfilters.push({name, tokens:copy(tokens)}); }
+  }
+  return {detail:{custom_analyzer:true, charfilters, tokenizer, tokenfilters}};
+}
+
+function diff(prev, cur){
+  if (!prev) return cur.map(t => ({...t, status:'same'}));
+  const group = list => list.reduce((g,t) => ((g[t.position] = g[t.position] || []).push(t), g), {});
+  const pAt = group(prev), cAt = group(cur);
+  const positions = [...new Set([...prev, ...cur].map(t => t.position))].sort((a,b) => a - b);
+  const out = [];
+  positions.forEach(p => {
+    const pa = pAt[p] || [], ca = cAt[p] || [];
+    if (!ca.length) { pa.forEach(t => out.push({...t, status:'removed'})); return; }
+    const before = pa.map(t => t.token);
+    ca.forEach((t,i) => {
+      if (before.includes(t.token)) out.push({...t, status:'same'});
+      else if (pa.length === ca.length) out.push({...t, status:'changed', from:pa[i].token});
+      else out.push({...t, status:'added'});
+    });
+  });
+  return out;
+}
+
+function toRows(original, resp){
+  const d = resp.detail;
+  const rows = [{name:'original', kind:'text', text:original}];
+  let text = original, prev = null;
+  (d.charfilters || []).forEach(cf => {
+    const now = cf.filtered_text.join(' ');
+    rows.push({name:cf.name, kind:'char', text:now, changed:now !== text});
+    text = now;
+  });
+  const push = (name, kind, tokens) => { rows.push({name, kind, chips:diff(prev, tokens)}); prev = tokens; };
+  if (d.tokenizer) push(d.tokenizer.name, 'tokenizer', d.tokenizer.tokens);
+  (d.tokenfilters || []).forEach(tf => push(tf.name, 'filter', tf.tokens));
+  return rows;
+}
+
+function finalTokens(rows){
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (rows[i].chips) return rows[i].chips.filter(c => c.status !== 'removed').map(c => c.token);
+  }
+  return [];
+}
+
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+const state = {doc:'', q:'', an:'english', step:0, playing:false, fresh:false};
+let model = null, timer = null;
+
+function compute(){
+  const a = ANALYZERS[state.an];
+  const searchChain = a.search || a.index;
+  const dResp = analyze(state.doc, a.index), qResp = analyze(state.q, searchChain);
+  const dRows = toRows(state.doc, dResp), qRaw = toRows(state.q, qResp);
+  const byName = {}; qRaw.forEach(r => byName[r.name] = r);
+  const qRows = dRows.map(r => byName[r.name] || {name:r.name, skipped:true});
+  model = {a, searchChain, dResp, dRows, qRows, qRaw, steps:[...dRows.map(r => r.name), 'compare']};
+}
+
+function renderLane(target, rows, upto, freshIdx){
+  target.replaceChildren();
+  rows.slice(0, upto + 1).forEach((r,i) => {
+    const row = el('div', 'row' + (i === freshIdx ? ' fresh' : ''));
+    row.append(el('div', 'stage', r.name === 'original' ? 'original text' : r.name));
+    const body = el('div', 'chips');
+    if (r.skipped) body.append(el('div', 'note', 'Not used for search text'));
+    else if (!r.chips) body.append(el('div', 'rawtext' + (r.changed ? ' changed' : ''), r.text || '(empty)'));
+    else if (!r.chips.length) body.append(el('div', 'note', 'No tokens'));
+    else r.chips.forEach((c,j) => {
+      const chip = el('div', 'chip ' + c.status);
+      chip.style.animationDelay = (j * 70) + 'ms';
+      chip.append(el('span', 'tok', c.token));
+      const sub = c.status === 'changed' ? 'was ' + c.from : c.status === 'added' ? 'new' : c.status === 'removed' ? 'removed' : 'pos ' + c.position;
+      chip.append(el('span', 'sub', sub));
+      body.append(chip);
+    });
+    row.append(body);
+    target.append(row);
+  });
+}
+
+function countLine(r){
+  if (r.kind === 'text') return '';
+  if (r.kind === 'char') return r.changed ? 'In the document text: the text changed.' : 'In the document text: nothing to remove.';
+  if (r.kind === 'tokenizer') return 'The document text became ' + r.chips.length + (r.chips.length === 1 ? ' token.' : ' tokens.');
+  const c = {changed:0, added:0, removed:0};
+  r.chips.forEach(x => { if (x.status in c) c[x.status]++; });
+  const parts = Object.keys(c).filter(k => c[k]).map(k => c[k] + ' ' + k);
+  return 'In the document text: ' + (parts.length ? parts.join(', ') : 'nothing changed') + '.';
+}
+
+function renderMatch(){
+  const docT = finalTokens(model.dRows), qT = finalTokens(model.qRaw);
+  const docSet = new Set(docT), qSet = new Set(qT);
+  const mDoc = $('mDoc'), mSearch = $('mSearch');
+  mDoc.replaceChildren(); mSearch.replaceChildren();
+  if (!docT.length) mDoc.append(el('div', 'note', 'No tokens'));
+  docT.forEach(t => {
+    const chip = el('div', 'chip' + (qSet.has(t) ? ' found' : ''));
+    chip.dataset.t = t;
+    chip.append(el('span', 'tok', t), el('span', 'sub', qSet.has(t) ? 'matched' : '\u00a0'));
+    mDoc.append(chip);
+  });
+  if (!qT.length) mSearch.append(el('div', 'note', 'No tokens'));
+  let found = 0;
+  qT.forEach(t => {
+    const ok = docSet.has(t); if (ok) found++;
+    const chip = el('div', 'chip ' + (ok ? 'found' : 'missing'));
+    chip.dataset.t = t;
+    chip.append(el('span', 'tok', t), el('span', 'sub', ok ? 'found' : 'not found'));
+    mSearch.append(chip);
+  });
+  let v;
+  if (!qT.length) v = 'The search text has no tokens left, so there is nothing to search for.';
+  else if (found === qT.length) v = 'All ' + qT.length + ' search tokens are in the document. This document matches.';
+  else if (found === 0) v = 'No search token is in the document. This document does not match.';
+  else v = found + ' of ' + qT.length + ' search tokens are in the document. It matches an OR search, but not an AND search.';
+  $('verdict').textContent = v;
+  return v;
+}
+
+function drawLinks(){
+  const board = $('matchBoard'), svg = $('links');
+  svg.replaceChildren();
+  if ($('match').hidden) return;
+  const br = board.getBoundingClientRect();
+  svg.setAttribute('width', br.width); svg.setAttribute('height', br.height);
+  svg.setAttribute('viewBox', '0 0 ' + br.width + ' ' + br.height);
+  const docChips = [...$('mDoc').querySelectorAll('.chip')];
+  $('mSearch').querySelectorAll('.chip.found').forEach(sc => {
+    const dc = docChips.find(d => d.dataset.t === sc.dataset.t);
+    if (!dc) return;
+    const a = dc.getBoundingClientRect(), b = sc.getBoundingClientRect();
+    const x1 = a.left + a.width / 2 - br.left, y1 = a.bottom - br.top;
+    const x2 = b.left + b.width / 2 - br.left, y2 = b.top - br.top;
+    const my = (y1 + y2) / 2;
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', 'M' + x1 + ' ' + y1 + ' C' + x1 + ' ' + my + ',' + x2 + ' ' + my + ',' + x2 + ' ' + y2);
+    p.setAttribute('pathLength', '1');
+    p.setAttribute('class', 'link');
+    svg.append(p);
+  });
+}
+
+function render(){
+  const max = model.steps.length - 1;
+  state.step = Math.max(0, Math.min(max, state.step));
+  const stageMax = model.dRows.length - 1;
+  const upto = Math.min(state.step, stageMax);
+  const freshIdx = state.fresh && state.step <= stageMax ? state.step : -1;
+  renderLane($('laneDoc'), model.dRows, upto, freshIdx);
+  renderLane($('laneQ'), model.qRows, upto, freshIdx);
+
+  const nav = $('steps'); nav.replaceChildren();
+  model.steps.forEach((name,i) => {
+    const b = el('button', i < state.step ? 'done' : '', name === 'original' ? 'original text' : name);
+    if (i === state.step) b.setAttribute('aria-current', 'step');
+    b.addEventListener('click', () => { stop(); go(i, i > state.step); });
+    nav.append(b);
+  });
+
+  const isCompare = state.step === max;
+  $('match').hidden = !isCompare;
+  const name = model.steps[state.step];
+  const head = 'Step ' + (state.step + 1) + ' of ' + model.steps.length + ': ';
+  if (state.step === 0) {
+    $('capTitle').textContent = head + 'original text';
+    $('capSay').textContent = 'This is the text before any change. Press Next to send it through the analyzer.';
+    $('capCount').textContent = '';
+  } else if (isCompare) {
+    renderMatch();
+    $('capTitle').textContent = head + 'compare';
+    $('capSay').textContent = 'A search token is found only when the document has the exact same token.';
+    $('capCount').textContent = 'Green lines join the tokens that are equal.';
+  } else {
+    $('capTitle').textContent = head + name + ' (' + STAGES[name].kindName + ')';
+    $('capSay').textContent = STAGES[name].say;
+    $('capCount').textContent = countLine(model.dRows[state.step]);
+  }
+
+  $('back').disabled = state.step === 0;
+  $('next').disabled = isCompare;
+  $('play').textContent = state.playing ? 'Pause' : 'Play';
+  const a = model.a, same = !a.search;
+  $('chain').textContent = (same ? 'Document and search: ' : 'Document: ') + a.index.join(' \u2192 ') + (same ? '' : '   |   Search: ' + a.search.join(' \u2192 '));
+  $('raw').textContent = JSON.stringify(model.dResp, null, 2);
+  requestAnimationFrame(drawLinks);
+}
+
+function go(n, fresh){ state.step = n; state.fresh = !!fresh; render(); }
+function stop(){ state.playing = false; clearInterval(timer); timer = null; }
+function play(){
+  if (state.step >= model.steps.length - 1) go(0, false);
+  state.playing = true;
+  clearInterval(timer);
+  timer = setInterval(() => {
+    if (state.step < model.steps.length - 1) go(state.step + 1, true);
+    if (state.step >= model.steps.length - 1) { stop(); render(); }
+  }, 1700);
+  render();
+}
+function refresh(resetStep){
+  stop(); compute();
+  if (resetStep) state.step = 0;
+  state.fresh = false; render();
+}
+
+Object.keys(ANALYZERS).forEach(k => { const o = el('option', '', ANALYZERS[k].label); o.value = k; $('an').append(o); });
+EXAMPLES.forEach(ex => {
+  const b = el('button', '', ex.name);
+  b.addEventListener('click', () => {
+    state.doc = ex.doc; state.q = ex.q; state.an = ex.an;
+    $('doc').value = ex.doc; $('q').value = ex.q; $('an').value = ex.an;
+    refresh(true);
+  });
+  $('examples').append(b);
+});
+$('doc').addEventListener('input', e => { state.doc = e.target.value; refresh(false); });
+$('q').addEventListener('input', e => { state.q = e.target.value; refresh(false); });
+$('an').addEventListener('change', e => { state.an = e.target.value; refresh(true); });
+$('back').addEventListener('click', () => { stop(); go(state.step - 1, false); });
+$('next').addEventListener('click', () => { stop(); go(state.step + 1, true); });
+$('restart').addEventListener('click', () => { stop(); go(0, false); });
+$('play').addEventListener('click', () => { if (state.playing) { stop(); render(); } else play(); });
+document.addEventListener('keydown', e => {
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight' && state.step < model.steps.length - 1) { stop(); go(state.step + 1, true); }
+  if (e.key === 'ArrowLeft' && state.step > 0) { stop(); go(state.step - 1, false); }
+});
+window.addEventListener('resize', drawLinks);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawLinks);
+
+const first = EXAMPLES[0];
+state.doc = first.doc; state.q = first.q; state.an = first.an;
+$('doc').value = first.doc; $('q').value = first.q; $('an').value = first.an;
+compute(); render();
+if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) play();
+</script>
+</body>
+</html>

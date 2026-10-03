@@ -1,0 +1,22 @@
+# secrets
+.env
+.env.local
+dev/.env
+
+# Claude Code
+.claude/settings.local.json
+.claude/worktrees/
+CLAUDE.local.md
+
+# python
+__pycache__/
+.venv/
+.pytest_cache/
+
+# node
+node_modules/
+dist/
+
+# editor and macOS
+.idea/
+.DS_Store

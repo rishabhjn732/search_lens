@@ -1,0 +1,13 @@
+{
+  "script": {
+    "lang": "mustache",
+    "source": {
+      "query": {
+        "multi_match": {
+          "query": "{{q}}",
+          "fields": ["title^2", "description"]
+        }
+      }
+    }
+  }
+}

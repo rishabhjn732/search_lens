@@ -1,0 +1,16 @@
+{"index":{"_id":"1"}}
+{"title":"Running Shoes for Men","description":"Light shoes for running on the road every day","brand":"Nike","category":"shoes","price":89.0}
+{"index":{"_id":"2"}}
+{"title":"Trail Running Shoes","description":"Strong grip for running on mud and rocks","brand":"Salomon","category":"shoes","price":120.0}
+{"index":{"_id":"3"}}
+{"title":"Classic Sneakers","description":"White sneakers for the city","brand":"Adidas","category":"shoes","price":75.0}
+{"index":{"_id":"4"}}
+{"title":"Kids Trainers","description":"Soft trainers for school and play","brand":"Puma","category":"shoes","price":40.0}
+{"index":{"_id":"5"}}
+{"title":"Running Shorts","description":"Shorts with a small pocket for the key","brand":"Nike","category":"clothes","price":30.0}
+{"index":{"_id":"6"}}
+{"title":"Smart TV 55 inch","description":"A television with clear picture and good sound","brand":"Samsung","category":"electronics","price":499.0}
+{"index":{"_id":"7"}}
+{"title":"Café Table","description":"A small round table for the balcony","brand":"Ikea","category":"furniture","price":59.0}
+{"index":{"_id":"8"}}
+{"title":"The Shoe Cleaning Kit","description":"A brush and a cloth to clean the shoes","brand":"Nike","category":"care","price":15.0}

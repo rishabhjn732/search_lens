@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search Lens · Home (B: Night lens)</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Design B: dark, glowing, "x-ray" lens that moves over documents. */
+:root{
+  --bg:#0B1020; --bg2:#121935; --panel:rgba(255,255,255,.04); --ink:#ECEFF5; --muted:#8F9BB5; --line:rgba(255,255,255,.10);
+  --cyan:#58C4DD; --lime:#9BE07A; --amber:#F4D345; --pink:#FF7AB6;
+  --sans:'Space Grotesk',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.55;overflow-x:hidden}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+
+/* background: grid + soft colour glows */
+.sky{position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(600px 400px at 15% 10%,rgba(88,196,221,.18),transparent 70%),
+    radial-gradient(500px 400px at 90% 30%,rgba(255,122,182,.12),transparent 70%),
+    linear-gradient(var(--line) 1px,transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/48px 48px,
+    var(--bg);
+  mask-image:linear-gradient(#000 0,#000 60%,transparent 100%)}
+
+header .wrap{display:flex;align-items:center;height:72px;gap:16px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.15rem;text-decoration:none}
+nav{margin-left:auto;display:flex;gap:26px;color:var(--muted);font-size:.95rem}
+nav a{text-decoration:none}nav a:hover{color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--sans);font-weight:700;font-size:1rem;padding:12px 22px;border-radius:10px;text-decoration:none;border:1px solid var(--line)}
+.btn.primary{background:linear-gradient(135deg,var(--cyan),#7AA8FF);color:#08101F;border:0;box-shadow:0 8px 30px -8px rgba(88,196,221,.7)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:var(--panel)}
+.btn.ghost:hover{border-color:var(--muted)}
+.btn.small{padding:8px 16px;font-size:.92rem}
+
+/* hero */
+.hero{text-align:center;padding:72px 0 40px}
+.pill{display:inline-flex;gap:8px;align-items:center;font-family:var(--mono);font-size:.8rem;color:var(--cyan);border:1px solid rgba(88,196,221,.35);background:rgba(88,196,221,.08);border-radius:99px;padding:6px 14px;margin-bottom:22px}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 10px var(--lime)}
+h1{font-size:clamp(2.4rem,5.5vw,4.2rem);line-height:1.04;letter-spacing:-.03em;margin:0 auto 20px;max-width:16ch}
+h1 span{background:linear-gradient(90deg,var(--cyan),var(--lime));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{color:var(--muted);font-size:1.2rem;max-width:56ch;margin:0 auto 30px}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* the lens scene */
+.scene{position:relative;margin:56px auto 0;max-width:920px;height:330px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,var(--bg2),rgba(18,25,53,.4));overflow:hidden}
+.docs{position:absolute;inset:0;padding:30px 36px;font-family:var(--mono);font-size:15px;display:grid;gap:14px;align-content:start}
+.doc{display:flex;gap:14px;align-items:center;white-space:nowrap}
+.doc .id{color:var(--muted);font-size:.78rem;width:54px}
+.doc .t{color:#4D5878}
+.layer-hi{clip-path:circle(92px at 10% 20%);animation:sweep 10s ease-in-out infinite}
+.layer-hi .t{color:var(--ink)}
+.layer-hi .m{color:#08101F;background:var(--lime);border-radius:4px;padding:0 4px;box-shadow:0 0 18px rgba(155,224,122,.6)}
+.layer-hi .s{color:var(--amber)}
+.doc .s{margin-left:auto;font-size:.85rem;color:transparent}
+.ring{position:absolute;width:184px;height:184px;border-radius:50%;border:3px solid var(--cyan);box-shadow:0 0 0 8px rgba(88,196,221,.1),0 0 40px rgba(88,196,221,.45),inset 0 0 30px rgba(88,196,221,.2);
+  left:10%;top:20%;transform:translate(-50%,-50%);animation:move 10s ease-in-out infinite;pointer-events:none}
+.ring::after{content:"";position:absolute;width:70px;height:12px;border-radius:6px;background:var(--cyan);right:-58px;bottom:-14px;transform:rotate(45deg);box-shadow:0 0 20px rgba(88,196,221,.5)}
+@keyframes sweep{
+  0%,100%{clip-path:circle(92px at 14% 22%)}
+  30%{clip-path:circle(92px at 52% 40%)}
+  60%{clip-path:circle(92px at 80% 64%)}
+  80%{clip-path:circle(92px at 34% 78%)}}
+@keyframes move{
+  0%,100%{left:14%;top:22%}
+  30%{left:52%;top:40%}
+  60%{left:80%;top:64%}
+  80%{left:34%;top:78%}}
+.query-float{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);font-family:var(--mono);font-size:.9rem;background:rgba(11,16,32,.85);border:1px solid var(--line);border-radius:10px;padding:8px 14px;backdrop-filter:blur(6px)}
+.query-float b{color:var(--cyan);font-weight:500}
+
+/* stats strip */
+.stats{display:flex;justify-content:center;gap:48px;flex-wrap:wrap;margin:44px 0 0;color:var(--muted);font-size:.92rem}
+.stats b{display:block;color:var(--ink);font-size:1.6rem;font-family:var(--mono)}
+
+section{padding:80px 0 20px}
+.kicker{font-family:var(--mono);color:var(--cyan);font-size:.82rem;margin:0 0 8px}
+h2{font-size:2.2rem;letter-spacing:-.02em;margin:0 0 30px;max-width:22ch}
+
+/* bento grid of screens */
+.bento{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+.tile{position:relative;grid-column:span 2;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;text-decoration:none;overflow:hidden;transition:border-color .25s,transform .25s}
+.tile:hover{border-color:rgba(88,196,221,.5);transform:translateY(-3px)}
+.tile.wide{grid-column:span 3}
+.tile h3{margin:14px 0 6px;font-size:1.2rem}
+.tile p{margin:0;color:var(--muted);font-size:.95rem}
+.tile .n{font-family:var(--mono);font-size:.75rem;color:var(--muted)}
+.tile .glow{position:absolute;width:180px;height:180px;border-radius:50%;right:-60px;top:-60px;filter:blur(40px);opacity:.35}
+.art{height:70px;display:flex;align-items:flex-end;gap:8px}
+.tok{font-family:var(--mono);font-size:.85rem;padding:4px 9px;border-radius:6px;border:1px solid}
+.bars{display:flex;flex-direction:column;gap:6px;width:100%}
+.bars i{display:block;height:9px;border-radius:5px;background:linear-gradient(90deg,var(--cyan),var(--lime))}
+
+.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.flow div{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px}
+.flow .k{font-family:var(--mono);font-size:2rem;color:var(--cyan)}
+.flow h3{margin:6px 0}
+.flow p{margin:0;color:var(--muted)}
+
+.safe{margin-top:20px;border-radius:18px;padding:36px;display:flex;gap:24px;align-items:center;border:1px solid rgba(155,224,122,.35);background:linear-gradient(135deg,rgba(155,224,122,.1),rgba(88,196,221,.06))}
+.safe h3{margin:0 0 4px;font-size:1.3rem}
+.safe p{margin:0;color:var(--muted)}
+.safe .btn{margin-left:auto}
+footer{color:var(--muted);font-size:.88rem;padding:60px 0 30px;text-align:center}
+
+@media (max-width:900px){
+  nav{display:none}
+  .bento{grid-template-columns:1fr}
+  .tile,.tile.wide{grid-column:auto}
+  .flow{grid-template-columns:1fr}
+  .safe{flex-direction:column;align-items:flex-start}.safe .btn{margin-left:0}
+  .doc .s{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .layer-hi{animation:none;clip-path:circle(92px at 52% 40%)}
+  .ring{animation:none;left:52%;top:40%}
+  .tile{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="sky" aria-hidden="true"></div>
+<header>
+  <div class="wrap">
+    <a class="logo" href="#">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><defs><linearGradient id="lg" x1="0" x2="1"><stop offset="0" stop-color="#58C4DD"/><stop offset="1" stop-color="#9BE07A"/></linearGradient></defs><circle cx="13" cy="13" r="9" fill="none" stroke="url(#lg)" stroke-width="3"/><line x1="20" y1="20" x2="27" y2="27" stroke="url(#lg)" stroke-width="3.5" stroke-linecap="round"/></svg>
+      Search Lens
+    </a>
+    <nav aria-label="Main"><a href="#screens">Screens</a><a href="#how">How it works</a><a href="#safe">Safety</a></nav>
+    <a class="btn ghost small" href="#">Connect</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <span class="pill"><i></i>Read-only debugger for OpenSearch</span>
+    <h1>Look <span>inside</span> every search result.</h1>
+    <p class="lead">Move a lens over your results. See the tokens, the matching words, and how each score was built.</p>
+    <div class="cta">
+      <a class="btn primary" href="#">Connect to a cluster →</a>
+      <a class="btn ghost" href="#screens">Explore the screens</a>
+    </div>
+
+    <div class="scene" role="img" aria-label="A lens moves over a list of products and shows the matching words run and shoe, with a score for each product">
+      <div class="docs" aria-hidden="true">
+        <div class="doc"><span class="id">#1042</span><span class="t">RunFast trail shoe, size 42</span><span class="s">7.84</span></div>
+        <div class="doc"><span class="id">#0871</span><span class="t">Leather office shoe, brown</span><span class="s">3.12</span></div>
+        <div class="doc"><span class="id">#2210</span><span class="t">Running socks, pack of three</span><span class="s">2.95</span></div>
+        <div class="doc"><span class="id">#0034</span><span class="t">Kids running shoes with lights</span><span class="s">6.40</span></div>
+        <div class="doc"><span class="id">#1777</span><span class="t">Water bottle for long runs</span><span class="s">2.71</span></div>
+        <div class="doc"><span class="id">#0905</span><span class="t">Shoe cleaning kit and brush</span><span class="s">3.05</span></div>
+        <div class="doc"><span class="id">#3301</span><span class="t">Ultra running shoe, carbon plate</span><span class="s">7.12</span></div>
+      </div>
+      <div class="docs layer-hi" aria-hidden="true">
+        <div class="doc"><span class="id">#1042</span><span class="t"><span class="m">Run</span>Fast trail <span class="m">shoe</span>, size 42</span><span class="s">7.84</span></div>
+        <div class="doc"><span class="id">#0871</span><span class="t">Leather office <span class="m">shoe</span>, brown</span><span class="s">3.12</span></div>
+        <div class="doc"><span class="id">#2210</span><span class="t"><span class="m">Running</span> socks, pack of three</span><span class="s">2.95</span></div>
+        <div class="doc"><span class="id">#0034</span><span class="t">Kids <span class="m">running</span> <span class="m">shoes</span> with lights</span><span class="s">6.40</span></div>
+        <div class="doc"><span class="id">#1777</span><span class="t">Water bottle for long <span class="m">runs</span></span><span class="s">2.71</span></div>
+        <div class="doc"><span class="id">#0905</span><span class="t"><span class="m">Shoe</span> cleaning kit and brush</span><span class="s">3.05</span></div>
+        <div class="doc"><span class="id">#3301</span><span class="t">Ultra <span class="m">running</span> <span class="m">shoe</span>, carbon plate</span><span class="s">7.12</span></div>
+      </div>
+      <div class="ring" aria-hidden="true"></div>
+      <div class="query-float" aria-hidden="true">query: <b>"running shoes"</b> → tokens: <b>run</b> · <b>shoe</b></div>
+    </div>
+
+    <div class="stats">
+      <div><b>5</b>screens</div>
+      <div><b>0</b>writes to your cluster</div>
+      <div><b>1</b>job: explain search</div>
+    </div>
+  </div>
+
+  <section id="screens" class="wrap">
+    <p class="kicker">// screens</p>
+    <h2>Everything you need to answer "why?"</h2>
+    <div class="bento">
+      <a class="tile wide" href="#"><span class="glow" style="background:var(--amber)"></span><span class="n">03</span>
+        <div class="art"><span class="tok" style="border-color:var(--amber);color:var(--amber)">Running</span><span style="color:var(--muted)">→</span><span class="tok" style="border-color:var(--lime);color:var(--lime)">run</span><span class="tok" style="border-color:var(--pink);color:var(--pink);text-decoration:line-through">!</span></div>
+        <h3>Token playground</h3><p>Type text and watch the analyzer cut and change it, step by step.</p></a>
+      <a class="tile wide" href="#"><span class="glow" style="background:var(--cyan)"></span><span class="n">04</span>
+        <div class="art"><div class="bars"><i style="width:92%"></i><i style="width:70%;opacity:.75"></i><i style="width:44%;opacity:.5"></i></div></div>
+        <h3>Query lab</h3><p>Run a query with a search template and see how each score was built.</p></a>
+      <a class="tile" href="#"><span class="glow" style="background:var(--cyan)"></span><span class="n">01</span>
+        <div class="art"><svg width="120" height="50" viewBox="0 0 120 50" aria-hidden="true"><rect x="1" y="10" width="118" height="30" rx="8" fill="none" stroke="#58C4DD" stroke-width="1.5"/><circle cx="18" cy="25" r="5" fill="#9BE07A"/><text x="32" y="30" fill="#8F9BB5" font-family="JetBrains Mono" font-size="12">https://…:9200</text></svg></div>
+        <h3>Connect</h3><p>Cluster URL, user and password.</p></a>
+      <a class="tile" href="#"><span class="glow" style="background:var(--lime)"></span><span class="n">02</span>
+        <div class="art"><svg width="120" height="56" viewBox="0 0 120 56" aria-hidden="true"><g fill="none" stroke-width="1.5"><rect x="2" y="4" width="34" height="22" rx="5" stroke="#9BE07A"/><rect x="42" y="4" width="34" height="22" rx="5" stroke="#9BE07A"/><rect x="82" y="4" width="34" height="22" rx="5" stroke="#F4D345"/><rect x="2" y="32" width="34" height="22" rx="5" stroke="#9BE07A"/><rect x="42" y="32" width="34" height="22" rx="5" stroke="#9BE07A"/></g></svg></div>
+        <h3>Cluster overview</h3><p>Indexes, mappings, nodes and health.</p></a>
+      <a class="tile" href="#"><span class="glow" style="background:var(--pink)"></span><span class="n">05</span>
+        <div class="art"><svg width="130" height="56" viewBox="0 0 130 56" aria-hidden="true"><polyline points="0,44 18,36 34,40 52,18 70,28 88,10 106,22 130,6" fill="none" stroke="#FF7AB6" stroke-width="2.5" stroke-linejoin="round"/></svg></div>
+        <h3>Load monitor</h3><p>Live CPU, memory and search queue.</p></a>
+    </div>
+  </section>
+
+  <section id="how" class="wrap">
+    <p class="kicker">// how it works</p>
+    <h2>Three steps. No setup on the cluster.</h2>
+    <div class="flow">
+      <div><span class="k">01</span><h3>Connect</h3><p>Enter the address and login. The password stays in backend memory only.</p></div>
+      <div><span class="k">02</span><h3>Ask</h3><p>Type text or a query, for example <code>running shoes</code>.</p></div>
+      <div><span class="k">03</span><h3>Understand</h3><p>See tokens, matches and the parts of each score.</p></div>
+    </div>
+  </section>
+
+  <section id="safe" class="wrap">
+    <div class="safe">
+      <svg width="52" height="52" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3 L34 9 V19 C34 28 27 34 20 37 C13 34 6 28 6 19 V9 Z" fill="none" stroke="#9BE07A" stroke-width="2.5"/><polyline points="13,20 18,25 27,15" fill="none" stroke="#9BE07A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div><h3>Read-only by design</h3><p>Search Lens never creates, changes or deletes anything on your cluster.</p></div>
+      <a class="btn primary" href="#">Connect to a cluster →</a>
+    </div>
+  </section>
+</main>
+<footer>Search Lens · prototype B, "Night lens" · not production code</footer>
+</body>
+</html>

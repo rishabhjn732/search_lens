@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search Lens · Word lists (A: Clean lab)</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Word lists page. Same look as a-clean-lab.html, plus purple for entities. */
+:root{
+  --board:#F3F5FA; --panel:#FFFFFF; --ink:#18202F; --muted:#586376; --line:#D3D9E5;
+  --blue:#0F6F93; --yellow:#8A5A00; --green:#35721A; --red:#B93226; --purple:#6B3FA0;
+  --blue-bg:#DDF1F8; --yellow-bg:#FFF2C9; --green-bg:#E3F2D8; --red-bg:#FBE3E0; --purple-bg:#EEE6F8;
+  --sans:'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--board);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+a{color:inherit}
+code{font-family:var(--mono);font-size:.9em}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+header{border-bottom:1px solid var(--line);background:var(--panel)}
+header .wrap{display:flex;align-items:center;gap:16px;height:64px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem;text-decoration:none}
+nav{margin-left:auto;display:flex;gap:22px;color:var(--muted);font-size:.95rem}
+nav a{text-decoration:none}
+nav a:hover,nav a[aria-current]{color:var(--ink)}
+nav a[aria-current]{font-weight:700;box-shadow:inset 0 -2px 0 var(--ink)}
+.badge{font-family:var(--mono);font-size:.78rem;padding:4px 10px;border-radius:99px;border:1px solid var(--line);color:var(--muted);display:flex;align-items:center;gap:6px}
+.badge i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+
+button,.btn{font-family:var(--sans);font-size:.95rem;font-weight:700;padding:9px 16px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;text-decoration:none}
+button:hover,.btn:hover{border-color:var(--muted)}
+.primary{background:var(--ink);color:var(--board);border-color:var(--ink)}
+
+.top{display:flex;align-items:flex-end;gap:24px;padding:40px 0 20px;flex-wrap:wrap}
+h1{font-size:2.3rem;letter-spacing:-.02em;margin:0 0 6px}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+.top .actions{margin-left:auto;display:flex;gap:10px}
+
+/* storage meter */
+.meter{display:flex;align-items:center;gap:14px;margin-bottom:18px;font-size:.88rem;color:var(--muted)}
+.meter .track{flex:1;max-width:340px;height:8px;border-radius:4px;background:var(--panel);border:1px solid var(--line);overflow:hidden}
+.meter .track span{display:block;height:100%;background:var(--green);transition:width .3s}
+.meter.warn .track span{background:var(--yellow)}
+.meter.full .track span{background:var(--red)}
+
+/* summary tiles */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;gap:14px;align-items:center;text-align:left;font-weight:400}
+.tile b{display:block;font-family:var(--mono);font-size:1.5rem;line-height:1.1}
+.tile span{color:var(--muted);font-size:.88rem}
+
+/* tabs */
+[role=tablist]{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+[role=tab]{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:12px 16px;color:var(--muted);display:flex;gap:8px;align-items:center;white-space:nowrap}
+[role=tab][aria-selected=true]{color:var(--ink);border-bottom-color:var(--c,var(--ink))}
+[role=tab] .count{font-family:var(--mono);font-size:.75rem;padding:1px 7px;border-radius:99px;background:var(--board);border:1px solid var(--line)}
+[role=tabpanel]{padding:24px 0 8px}
+[role=tabpanel][hidden]{display:none}
+
+.panel-grid{display:grid;grid-template-columns:1fr 1.15fr;gap:20px;align-items:start}
+.mt{margin-top:20px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.box h3{margin:0;font-size:1.02rem;padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.box h3 small{margin-left:auto;font-weight:400;color:var(--muted);font-family:var(--mono);font-size:.78rem}
+.explain{padding:16px 18px;color:var(--muted);font-size:.95rem;border-top:1px solid var(--line)}
+.box > .explain:first-of-type{border-top:0}
+.explain p{margin:0 0 10px}
+.explain pre{margin:0;font-family:var(--mono);font-size:.8rem;background:var(--board);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--ink);white-space:pre-wrap}
+.empty{margin:0;padding:18px;color:var(--muted)}
+
+/* saved files list */
+.files{list-style:none;margin:0;padding:0}
+.files li{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center;padding:12px 18px;border-top:1px solid var(--line)}
+.files li:first-child{border-top:0}
+.files li.sel{background:var(--board);box-shadow:inset 3px 0 0 var(--c,var(--ink))}
+.files li.off .name{opacity:.55}
+.files .name{all:unset;cursor:pointer;font-family:var(--mono);font-size:.92rem;overflow-wrap:anywhere}
+.files .name:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.files .meta{display:block;font-family:var(--sans);color:var(--muted);font-size:.8rem}
+.switch{position:relative;width:42px;height:24px;border-radius:12px;background:var(--line);border:0;padding:0}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}
+.switch[aria-checked=true]{background:var(--green)}
+.switch[aria-checked=true]::after{left:21px}
+.icon-btn{padding:4px 9px;font-weight:400;color:var(--muted);border-color:transparent;background:none}
+.icon-btn:hover{color:var(--red);border-color:var(--red)}
+
+.add-file{display:flex;align-items:center;gap:12px;padding:14px 18px;border-top:1px solid var(--line);background:var(--board);flex-wrap:wrap}
+.add-file label{position:relative}
+.add-file label:focus-within{outline:2px solid var(--blue);outline-offset:2px}
+.add-file input{position:absolute;width:1px;height:1px;opacity:0}
+.add-file .hint{color:var(--muted);font-size:.85rem}
+
+/* messages */
+.msg{padding:12px 18px;border-top:1px solid;font-size:.9rem}
+.msg.ok{background:var(--green-bg);color:var(--green);border-color:var(--green)}
+.msg.err{background:var(--red-bg);color:var(--red);border-color:var(--red)}
+.msg ul{margin:6px 0 0;padding-left:18px}
+.msg .ln{font-family:var(--mono);font-weight:500}
+.msg .warn{color:var(--yellow)}
+
+/* entries table */
+.filter{padding:10px 18px;border-bottom:1px solid var(--line)}
+.filter input,.add input{width:100%;font-family:var(--mono);font-size:.92rem;padding:8px 10px;border:1px solid var(--line);border-radius:6px}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:8px 18px;border-top:1px solid var(--line)}
+thead th{border-top:0}
+th{font-size:.78rem;color:var(--muted);font-weight:400;background:var(--board)}
+td code{background:var(--board);border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+td.x{width:1%;padding:4px 10px}
+.add{display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--line);background:var(--board)}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{font-family:var(--mono);font-size:.95rem;padding:4px 10px;border:1.5px solid var(--line);border-radius:6px;background:var(--board)}
+.chip .why{display:block;font-family:var(--sans);font-size:.68rem;color:var(--muted)}
+.chip.p{border-color:var(--purple);background:var(--purple-bg)}
+.chip.p .why{color:var(--purple)}
+
+/* entity "try it" */
+.try{padding:18px}
+.try label{display:block;font-weight:700;margin-bottom:6px}
+.try input{width:100%;font-family:var(--mono);font-size:1rem;padding:10px 12px;border:1px solid var(--line);border-radius:8px}
+.lane{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:start;padding:14px 0 0}
+.lane .lbl{font-family:var(--mono);font-size:.78rem;color:var(--muted);padding-top:8px}
+.lane + .lane{border-top:1px dashed var(--line);margin-top:14px}
+.join{margin:16px 0 0;padding:14px;border-radius:10px;background:var(--purple-bg);color:var(--purple);font-size:.92rem}
+
+/* entity picture */
+.merge{display:block;width:100%;height:auto;margin:6px 0 4px}
+.merge .w{animation:slide 6s ease-in-out infinite}
+.merge .w2{animation-name:slide2}
+.merge .one{animation:appear 6s ease-in-out infinite}
+@keyframes slide{0%,20%{transform:none}45%,85%{transform:translateX(22px);opacity:0}100%{opacity:1}}
+@keyframes slide2{0%,20%{transform:none}45%,85%{transform:translateX(-22px);opacity:0}100%{opacity:1}}
+@keyframes appear{0%,40%{opacity:0}50%,85%{opacity:1}95%,100%{opacity:0}}
+
+.note{font-size:.88rem;color:var(--muted);margin:18px 0 0;display:flex;gap:10px;align-items:flex-start}
+footer{border-top:1px solid var(--line);color:var(--muted);font-size:.9rem;padding:24px 0;margin-top:48px}
+
+@media (max-width:900px){
+  nav{display:none}
+  .tiles{grid-template-columns:1fr 1fr}
+  .panel-grid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  .merge .w,.merge .one{animation:none}
+  .merge .w{opacity:0}
+  .merge .one{opacity:1}
+  .switch::after,.meter .track span{transition:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="logo" href="a-clean-lab.html">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="#18202F" stroke-width="2.5"/><line x1="18" y1="18" x2="25" y2="25" stroke="#18202F" stroke-width="3" stroke-linecap="round"/><circle cx="12" cy="12" r="3" fill="#0F6F93"/></svg>
+      Search Lens
+    </a>
+    <nav aria-label="Main">
+      <a href="a-clean-lab.html">Home</a><a href="a-clean-lab.html#screens">Screens</a><a href="a-word-lists.html" aria-current="page">Word lists</a>
+    </nav>
+    <span class="badge"><i></i>Not connected</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="top">
+    <div>
+      <h1>Word lists</h1>
+      <p class="lead">Your saved entities, protected words, synonyms and dictionaries. Turn a file on, and the Token playground and Query lab use it.</p>
+    </div>
+    <div class="actions"><button id="reset">Reset sample data</button><button class="primary" id="add-top">Add file</button></div>
+  </div>
+
+  <div class="meter" id="meter"><span>Browser storage</span><span class="track"><span></span></span><span class="txt"></span></div>
+
+  <div class="tiles" id="tiles">
+    <button class="tile" data-go="entity"><svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="12" width="34" height="16" rx="5" fill="#EEE6F8" stroke="#6B3FA0" stroke-width="2"/><line x1="20" y1="15" x2="20" y2="25" stroke="#6B3FA0" stroke-width="2" stroke-dasharray="2 2"/></svg><div><b data-n="entity">0</b><span>entities</span></div></button>
+    <button class="tile" data-go="protected"><svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><rect x="7" y="17" width="26" height="18" rx="4" fill="#FFF2C9" stroke="#8A5A00" stroke-width="2"/><path d="M13 17 V12 a7 7 0 0 1 14 0 V17" fill="none" stroke="#8A5A00" stroke-width="2.5"/></svg><div><b data-n="protected">0</b><span>protected words</span></div></button>
+    <button class="tile" data-go="synonym"><svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="8" width="16" height="11" rx="3" fill="#DDF1F8" stroke="#0F6F93" stroke-width="2"/><rect x="21" y="21" width="16" height="11" rx="3" fill="#DDF1F8" stroke="#0F6F93" stroke-width="2"/></svg><div><b data-n="synonym">0</b><span>synonym rules</span></div></button>
+    <button class="tile" data-go="hunspell"><svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><path d="M6 8 h12 a3 3 0 0 1 3 3 V34 a3 3 0 0 0 -3 -3 H6 Z M34 8 h-12 a3 3 0 0 0 -3 3 V34 a3 3 0 0 1 3 -3 H34 Z" fill="#E3F2D8" stroke="#35721A" stroke-width="2"/></svg><div><b data-n="hunspell">0</b><span>Hunspell dictionaries</span></div></button>
+  </div>
+
+  <div role="tablist" aria-label="List types">
+    <button role="tab" id="t-entity" aria-controls="p-entity" aria-selected="true" style="--c:var(--purple)">Entities <span class="count" data-c="entity"></span></button>
+    <button role="tab" id="t-protected" aria-controls="p-protected" aria-selected="false" tabindex="-1" style="--c:var(--yellow)">Protected words <span class="count" data-c="protected"></span></button>
+    <button role="tab" id="t-synonym" aria-controls="p-synonym" aria-selected="false" tabindex="-1" style="--c:var(--blue)">Synonyms <span class="count" data-c="synonym"></span></button>
+    <button role="tab" id="t-hunspell" aria-controls="p-hunspell" aria-selected="false" tabindex="-1" style="--c:var(--green)">Hunspell <span class="count" data-c="hunspell"></span></button>
+  </div>
+
+  <section role="tabpanel" id="p-entity" aria-labelledby="t-entity" style="--c:var(--purple)">
+    <div class="panel-grid">
+      <div>
+        <div class="box">
+          <h3>What is an entity?</h3>
+          <div class="explain">
+            <p>A group of words that means one thing. Search Lens keeps it together as <b>one token</b>, and a query matches it only as the exact phrase.</p>
+            <svg class="merge" viewBox="0 0 420 110" role="img" aria-label="The words ai and supplychain join into one token: ai supplychain">
+              <g class="w"><rect x="40" y="14" width="60" height="34" rx="7" fill="#F3F5FA" stroke="#D3D9E5" stroke-width="1.5"/><text x="70" y="36" text-anchor="middle" font-family="JetBrains Mono" font-size="15" fill="#18202F">ai</text></g>
+              <g class="w w2"><rect x="120" y="14" width="130" height="34" rx="7" fill="#F3F5FA" stroke="#D3D9E5" stroke-width="1.5"/><text x="185" y="36" text-anchor="middle" font-family="JetBrains Mono" font-size="15" fill="#18202F">supplychain</text></g>
+              <text x="285" y="37" font-family="JetBrains Mono" font-size="13" fill="#586376">2 tokens</text>
+              <g class="one"><rect x="40" y="62" width="210" height="38" rx="7" fill="#EEE6F8" stroke="#6B3FA0" stroke-width="2"/><text x="145" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="15" fill="#6B3FA0">ai supplychain</text><text x="285" y="86" font-family="JetBrains Mono" font-size="13" fill="#6B3FA0">1 token</text></g>
+            </svg>
+          </div>
+        </div>
+        <div class="box mt" data-files="entity"></div>
+      </div>
+      <div>
+        <div class="box">
+          <h3>Try it <small>uses the files that are on</small></h3>
+          <div class="try">
+            <label for="ent-in">Type some text</label>
+            <input id="ent-in" value="New AI SupplyChain platform for retail">
+            <div class="lane"><span class="lbl">normal</span><div class="chips" id="ent-plain"></div></div>
+            <div class="lane"><span class="lbl">with entities</span><div class="chips" id="ent-joined"></div></div>
+            <p class="join" id="ent-msg" role="status"></p>
+          </div>
+        </div>
+        <div class="box mt" data-entries="entity"></div>
+      </div>
+    </div>
+  </section>
+
+  <section role="tabpanel" id="p-protected" aria-labelledby="t-protected" style="--c:var(--yellow)" hidden>
+    <div class="panel-grid"><div class="box" data-files="protected"></div><div class="box" data-entries="protected"></div></div>
+  </section>
+  <section role="tabpanel" id="p-synonym" aria-labelledby="t-synonym" style="--c:var(--blue)" hidden>
+    <div class="panel-grid"><div class="box" data-files="synonym"></div><div class="box" data-entries="synonym"></div></div>
+  </section>
+  <section role="tabpanel" id="p-hunspell" aria-labelledby="t-hunspell" style="--c:var(--green)" hidden>
+    <div class="panel-grid"><div class="box" data-files="hunspell"></div><div class="box" data-entries="hunspell"></div></div>
+  </section>
+
+  <p class="note"><svg width="20" height="20" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3 L34 9 V19 C34 28 27 34 20 37 C13 34 6 28 6 19 V9 Z" fill="#E3F2D8" stroke="#35721A" stroke-width="3"/></svg>Lists are saved in this browser (localStorage), not on the cluster. They are sent inside each analyze request only.</p>
+</main>
+<footer><div class="wrap">Search Lens · prototype A, "Word lists" · not production code</div></footer>
+
+<script src="wordlists.js"></script>
+<script>
+// Prototype only. Draws the page from WordLists (localStorage).
+var W = window.WordLists;
+var ORDER = ['entity', 'protected', 'synonym', 'hunspell'];
+var PAGE = 20;
+var state = { tab: 'entity', selected: {}, msg: {}, entryMsg: {}, filter: {} };
+
+// Help text is fixed and written here, so innerHTML is safe for it.
+var HELP = {
+  entity: '<p>One phrase per line, two or more words. Lines that start with # are comments.</p><pre># entity.txt\nai supplychain\nmachine learning\nnew york</pre>',
+  protected: '<p>The stemmer does not change these words. For example, <code>iphone</code> stays <code>iphone</code>, not <code>iphon</code>. One word per line.</p><pre># protected.txt\niphone\nadidas\nkubernetes</pre>',
+  synonym: '<p><code>a, b</code> means both words find each other. <code>a =&gt; b</code> means <code>a</code> is replaced by <code>b</code>.</p><pre># synonyms.txt, Solr format\nsneakers, running shoes\ntv =&gt; television</pre>',
+  hunspell: '<p>A real dictionary finds the base word, for example <code>ran</code> becomes <code>run</code>. Choose the two files together. The first line of the .dic file is the number of words.</p><pre>en_US.aff   rules\nen_US.dic   words</pre>'
+};
+
+function h(tag, props) {
+  var e = document.createElement(tag);
+  if (props) Object.keys(props).forEach(function (k) {
+    if (k in e) e[k] = props[k]; else e.setAttribute(k, props[k]);
+  });
+  for (var i = 2; i < arguments.length; i++) {
+    var c = arguments[i];
+    if (c !== null && c !== undefined && c !== '' && c !== false) e.append(c);
+  }
+  return e;
+}
+
+function plural(n, type) { var t = W.TYPES[type]; return n + ' ' + (n === 1 ? t.one : t.many); }
+
+function ago(ts) {
+  var s = (Date.now() - ts) / 1000;
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + ' min ago';
+  if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+  var d = Math.floor(s / 86400);
+  return d === 1 ? 'yesterday' : d + ' days ago';
+}
+
+function selectedFile(type) {
+  var files = W.list(type);
+  return files.filter(function (f) { return f.id === state.selected[type]; })[0] || files[0];
+}
+
+function message(m) {
+  var box = h('div', { className: 'msg ' + m.kind, role: m.kind === 'err' ? 'alert' : 'status' }, h('b', null, m.title));
+  var items = m.items || [];
+  if (items.length) {
+    var ul = h('ul');
+    items.slice(0, 5).forEach(function (it) {
+      ul.append(h('li', { className: it.warn ? 'warn' : '' }, it.line ? h('span', { className: 'ln' }, 'Line ' + it.line + ': ') : '', it.msg));
+    });
+    if (items.length > 5) ul.append(h('li', null, '… and ' + (items.length - 5) + ' more.'));
+    box.append(ul);
+  }
+  return box;
+}
+
+function fail(type, text) { state.msg[type] = { kind: 'err', title: text }; }
+
+function renderFiles(type) {
+  var box = document.querySelector('[data-files=' + type + ']');
+  var files = W.list(type);
+  var sel = selectedFile(type);
+  box.replaceChildren(h('h3', null, type === 'hunspell' ? 'Dictionaries' : 'Saved files',
+    h('small', null, files.length + (files.length === 1 ? ' file' : ' files'))));
+
+  if (!files.length) box.append(h('p', { className: 'empty' }, 'No files yet. Add one to start.'));
+  else {
+    var ul = h('ul', { className: 'files' });
+    files.forEach(function (f) {
+      ul.append(h('li', { className: (sel && f.id === sel.id ? 'sel ' : '') + (f.enabled ? '' : 'off') },
+        fileIcon(type),
+        h('button', { className: 'name', title: 'Show entries', onclick: function () { state.selected[type] = f.id; state.entryMsg[type] = null; render(); } },
+          f.name, h('span', { className: 'meta' }, plural(f.entries.length, type) + ' · ' + ago(f.updated) + (f.enabled ? '' : ' · off'))),
+        h('button', { className: 'switch', role: 'switch', 'aria-checked': String(f.enabled), 'aria-label': 'Use ' + f.name,
+          onclick: function () {
+            var err = W.toggle(f.id);
+            if (err) fail(type, err); else state.msg[type] = null;
+            render();
+          } }),
+        h('button', { className: 'icon-btn', 'aria-label': 'Remove ' + f.name, title: 'Remove',
+          onclick: function () {
+            if (!confirm('Remove ' + f.name + '? Its ' + plural(f.entries.length, type) + ' will be deleted from this browser.')) return;
+            var err = W.remove(f.id);
+            state.msg[type] = err ? { kind: 'err', title: err } : { kind: 'ok', title: 'Removed ' + f.name + '.' };
+            render();
+          } }, '✕')));
+    });
+    box.append(ul);
+  }
+
+  var input = h('input', { type: 'file', accept: W.TYPES[type].accept, multiple: type === 'hunspell' });
+  input.id = 'file-' + type;
+  input.onchange = function () {
+    if (!input.files.length) return;
+    W.addFiles(type, input.files).then(function (r) {
+      var warns = r.warnings.map(function (w) { return { line: w.line, msg: w.msg, warn: true }; });
+      if (r.ok) {
+        state.selected[type] = r.id;
+        state.msg[type] = { kind: 'ok', title: (r.replaced ? 'Replaced ' : 'Saved ') + r.name + ': ' + plural(r.count, type) + '.', items: warns };
+      } else {
+        var n = r.errors.length;
+        state.msg[type] = { kind: 'err', title: 'Not saved. ' + r.name + ' has ' + n + (n === 1 ? ' problem:' : ' problems:'), items: r.errors.concat(warns) };
+      }
+      render();
+    });
+  };
+  box.append(h('div', { className: 'add-file' },
+    h('label', { className: 'btn' }, type === 'hunspell' ? 'Add .aff + .dic' : 'Add file', input),
+    h('span', { className: 'hint' }, W.TYPES[type].hint)));
+  if (state.msg[type]) box.append(message(state.msg[type]));
+  var help = h('div', { className: 'explain' });
+  help.innerHTML = HELP[type];
+  box.append(help);
+}
+
+function fileIcon(type) {
+  var c = { entity: ['#EEE6F8', '#6B3FA0'], protected: ['#FFF2C9', '#8A5A00'], synonym: ['#DDF1F8', '#0F6F93'], hunspell: ['#E3F2D8', '#35721A'] }[type];
+  var ns = 'http://www.w3.org/2000/svg';
+  var svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('width', 22); svg.setAttribute('height', 26); svg.setAttribute('viewBox', '0 0 22 26'); svg.setAttribute('aria-hidden', 'true');
+  var p = document.createElementNS(ns, 'path');
+  p.setAttribute('d', 'M2 2 h12 l6 6 v16 h-18 Z'); p.setAttribute('fill', c[0]); p.setAttribute('stroke', c[1]); p.setAttribute('stroke-width', '1.5');
+  svg.append(p);
+  return svg;
+}
+
+function renderEntries(type) {
+  var box = document.querySelector('[data-entries=' + type + ']');
+  var f = selectedFile(type);
+  box.replaceChildren();
+  if (!f) { box.append(h('h3', null, 'Entries'), h('p', { className: 'empty' }, 'Add a file to see its entries here.')); return; }
+
+  var small = h('small');
+  box.append(h('h3', null, f.name, small));
+  var filter = h('input', { type: 'search', placeholder: 'Filter entries', value: state.filter[type] || '', 'aria-label': 'Filter entries' });
+  box.append(h('div', { className: 'filter' }, filter));
+  var tableWrap = h('div');
+  box.append(tableWrap);
+
+  function rows() {
+    var q = (state.filter[type] || '').toLowerCase();
+    var shown = f.entries.filter(function (e) { return e.indexOf(q) >= 0; });
+    small.textContent = 'showing ' + Math.min(PAGE, shown.length) + ' of ' + shown.length;
+    var head = { entity: ['Entity', 'Becomes one token'], protected: ['Word'], synonym: ['Rule', 'Type'], hunspell: ['Word'] }[type];
+    var tr = h('tr');
+    head.forEach(function (t) { tr.append(h('th', null, t)); });
+    if (type !== 'hunspell') tr.append(h('th', null, h('span', { className: 'sr' }, '')));
+    var tbody = h('tbody');
+    shown.slice(0, PAGE).forEach(function (e) {
+      var row = h('tr', null, h('td', null, e));
+      if (type === 'entity') row.append(h('td', null, h('code', null, e)));
+      if (type === 'synonym') row.append(h('td', null, e.indexOf('=>') >= 0 ? 'one way' : 'both ways'));
+      if (type !== 'hunspell') row.append(h('td', { className: 'x' }, h('button', { className: 'icon-btn', 'aria-label': 'Remove ' + e, title: 'Remove',
+        onclick: function () {
+          var err = W.removeEntry(f.id, e);
+          state.entryMsg[type] = err ? { kind: 'err', title: err } : { kind: 'ok', title: 'Removed "' + e + '".' };
+          render();
+        } }, '✕')));
+      tbody.append(row);
+    });
+    if (!shown.length) tbody.append(h('tr', null, h('td', { colSpan: 3 }, 'Nothing matches "' + q + '".')));
+    tableWrap.replaceChildren(h('table', null, h('thead', null, tr), tbody));
+  }
+  filter.oninput = function () { state.filter[type] = filter.value; rows(); };
+  rows();
+
+  if (type === 'hunspell') {
+    box.append(h('p', { className: 'empty' }, 'Words come from the .dic file. To change them, edit the file and add it again.'));
+  } else {
+    var ex = { entity: 'add an entity, for example: data lake', protected: 'add a word, for example: wifi', synonym: 'add a rule, for example: couch, sofa' }[type];
+    var add = h('input', { placeholder: ex, 'aria-label': 'New entry for ' + f.name });
+    var go = function () {
+      var v = add.value;
+      var err = W.addEntry(f.id, v);
+      state.entryMsg[type] = err ? { kind: 'err', title: err } : { kind: 'ok', title: 'Added to ' + f.name + '.' };
+      render();
+      if (err) { var again = document.querySelector('[data-entries=' + type + '] .add input'); again.value = v; again.focus(); }
+    };
+    add.onkeydown = function (e) { if (e.key === 'Enter') go(); };
+    box.append(h('div', { className: 'add' }, add, h('button', { onclick: go }, 'Add')));
+  }
+  if (state.entryMsg[type]) box.append(message(state.entryMsg[type]));
+}
+
+function renderCounts() {
+  ORDER.forEach(function (type) {
+    var files = W.list(type);
+    var n = type === 'hunspell' ? files.length : files.reduce(function (s, f) { return s + f.entries.length; }, 0);
+    document.querySelector('[data-n=' + type + ']').textContent = n;
+    document.querySelector('[data-c=' + type + ']').textContent = n;
+  });
+  var used = W.used(), pct = Math.min(100, used / W.QUOTA * 100);
+  var m = document.getElementById('meter');
+  m.className = 'meter' + (pct > 95 ? ' full' : pct > 80 ? ' warn' : '');
+  m.querySelector('.track span').style.width = Math.max(pct, 1) + '%';
+  m.querySelector('.txt').textContent = W.kb(used) + ' of about ' + W.kb(W.QUOTA) + ' used';
+}
+
+// ---- entity try-it ----
+function chip(text, cls, why) {
+  return h('span', { className: 'chip' + (cls ? ' ' + cls : '') }, text, why ? h('span', { className: 'why' }, why) : null);
+}
+function words(s) { return s.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean); }
+
+function renderTry() {
+  var text = words(document.getElementById('ent-in').value);
+  // longest entity first, so "supply chain management" wins over "supply chain"
+  var ents = W.enabledEntries('entity').map(words).sort(function (a, b) { return b.length - a.length; });
+  var plain = document.getElementById('ent-plain'), joined = document.getElementById('ent-joined');
+  plain.replaceChildren.apply(plain, text.map(function (w) { return chip(w); }));
+  joined.replaceChildren();
+  var found = [];
+  for (var i = 0; i < text.length; i++) {
+    var hit = ents.filter(function (p) { return p.every(function (w, k) { return text[i + k] === w; }); })[0];
+    if (hit) { joined.append(chip(hit.join(' '), 'p', 'entity')); found.push(hit.join(' ')); i += hit.length - 1; }
+    else joined.append(chip(text[i]));
+  }
+  var msg = document.getElementById('ent-msg');
+  if (!W.list('entity').some(function (f) { return f.enabled; })) msg.textContent = 'No entity file is on. Turn one on to see entities join.';
+  else if (!found.length) msg.textContent = 'No entity found in this text. Try "ai supplychain" or "new york".';
+  else msg.textContent = text.length + ' tokens became ' + joined.children.length + '. "' + found[0] + '" is one token, so only the exact phrase matches it.';
+}
+
+function render() {
+  renderCounts();
+  ORDER.forEach(function (t) { renderFiles(t); renderEntries(t); });
+  renderTry();
+}
+
+// ---- tabs ----
+var tabs = Array.from(document.querySelectorAll('[role=tab]'));
+function select(type, focus) {
+  state.tab = type;
+  tabs.forEach(function (t) {
+    var on = t.id === 't-' + type;
+    t.setAttribute('aria-selected', on);
+    t.tabIndex = on ? 0 : -1;
+    document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+    if (on && focus) t.focus();
+  });
+}
+tabs.forEach(function (t, i) {
+  t.addEventListener('click', function () { select(ORDER[i]); });
+  t.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') select(ORDER[(i + 1) % ORDER.length], true);
+    if (e.key === 'ArrowLeft') select(ORDER[(i - 1 + ORDER.length) % ORDER.length], true);
+  });
+});
+document.querySelectorAll('[data-go]').forEach(function (b) {
+  b.addEventListener('click', function () { select(b.dataset.go, true); });
+});
+
+document.getElementById('add-top').onclick = function () { document.getElementById('file-' + state.tab).click(); };
+document.getElementById('reset').onclick = function () {
+  if (!confirm('Delete all your lists in this browser and load the sample data again?')) return;
+  W.reset();
+  state = { tab: state.tab, selected: {}, msg: {}, entryMsg: {}, filter: {} };
+  render();
+};
+document.getElementById('ent-in').addEventListener('input', renderTry);
+var start = location.hash.slice(1);
+if (ORDER.indexOf(start) >= 0) select(start);
+render();
+</script>
+</body>
+</html>
