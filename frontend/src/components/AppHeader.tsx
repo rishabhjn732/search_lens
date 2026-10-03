@@ -17,6 +17,7 @@ export default function AppHeader() {
           <NavLink to="/" end>
             Home
           </NavLink>
+          <NavLink to="/mapping-lab">Mapping lab</NavLink>
           <NavLink to="/word-lists">Word lists</NavLink>
           <NavLink to="/connect">Connect</NavLink>
         </nav>
