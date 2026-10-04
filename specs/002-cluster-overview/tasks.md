@@ -87,7 +87,36 @@ Do the tasks in order. One task per `/spec-implement` run.
     cluster's real order; a fixed sentence says this runs in the browser and changes nothing on
     the cluster; closing the view returns to the Fields tab exactly as it was. `FieldTree` rows
     now show the field's full dotted path, not just its last segment.
+  - Superseded by task 10: the browser-only engine (`analyzeInBrowser`) built here turned out to
+    be wrong for R9.4 (see design.md's Decisions) and is replaced there with real cluster calls.
 
-- [ ] 10. Manual check against the practice cluster (all)
+- [x] 10. Live-cluster playground engine, and word-list choices (R9.4, R9.7, R10.1, R10.2, R10.3,
+  R10.4, R10.5, R10.6)
+  - Files: `frontend/src/opensearch/overview.ts` (+ test, new `analyzePlaygroundStep(request,
+    name, spec)` calling `POST /<index>/_analyze` with an explicit `tokenizer`/`char_filter`/
+    `filter`/`text`/`explain:true` body — see design.md's "OpenSearch calls" table for the exact
+    shape), `frontend/src/screens/ClusterOverview/FieldPlayground.tsx` (+ test, replace
+    `analyzeInBrowser` with `analyzePlaygroundStep`; add the synonym-step cluster-file/saved-list
+    choice and the "Collapse saved entities first" switch, both reading `useWordLists()` from
+    `src/wordlists/useWordLists.ts`, spec 006)
+  - Done when: every reorder, the initial open, and Reset re-run through
+    `analyzePlaygroundStep` against the real cluster (no `analyzeInBrowser` call left in
+    `FieldPlayground`), so a cluster-only filter (e.g. a hand-named synonym or stop filter) shows
+    its real tokens instead of an unknown passthrough; a synonym-type step shows the "Use the
+    cluster's file" / "Use a saved synonym list" choice only when a synonym list is saved
+    (`useWordLists().list('synonym')` non-empty), and picking the saved list sends an inline
+    `{ type: 'synonym', synonyms: enabledEntries('synonym') }` in that step's place; the "Collapse
+    saved entities first" switch shows only when an entity list is saved, and turning it on joins
+    a matching saved phrase in the typed text (e.g. "ai supplychain" → "ai_supplychain") before
+    the request, with a note of what was joined; the fixed sentence (R9.7) is updated to say
+    nothing on the cluster changes for any of this (true, since it is all read-only `_analyze`
+    calls). Tests use a fake `fetch` and a fake/seeded word-list store.
+  - Updated after a user test: a collapsed entity's token was showing with the internal join
+    character (e.g. "ai_supplychain") instead of its real spacing. Fixed by keeping the join
+    character only in the request sent to the cluster, and mapping the matching token back to
+    the original phrase before it is displayed (R10.5) — see notes.md for the full story,
+    including a wrong intermediate step where the switch was removed entirely and then restored.
+
+- [ ] 11. Manual check against the practice cluster (all)
   - Done when: every acceptance criterion in `requirements.md` was tried by hand against the
     `dev/` practice cluster and the result is written in `notes.md`.

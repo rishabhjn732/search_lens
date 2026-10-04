@@ -21,9 +21,33 @@ that one part of the screen and leaves the rest working.
 | Index fields | `GET /<index>/_mapping` | — |
 | Index settings and analyzers | `GET /<index>/_settings` | — |
 | Shard placement | `GET /_cat/shards?format=json&h=index,shard,prirep,state,node` | filtered to the chosen index client-side |
+| Field playground step-by-step tokens | `POST /<index>/_analyze` | `{"tokenizer": "<name>", "char_filter": ["<name>", ...], "filter": [<name or inline step>, ...], "text": "<typed text>", "explain": true}` |
 
-(The field analyzer "Try it" view (R9) computes tokens in the browser — see below — and makes no
-cluster call of its own.)
+The playground's `filter` array is the live, possibly-reordered list the user is trying. Each
+entry is either a filter's real name (OpenSearch resolves it from the index's own settings, the
+same as a normal analyzer would) or, when the user chose "Use a saved list" for a synonym step
+(R10), an inline filter definition built from that saved list instead of the name. This is how a
+cluster-only filter like a named synonym or stop filter is ever tried at all — nothing in this
+app can replicate one without asking the cluster, and earlier design choices against doing so
+(see "Decisions") undersold how useful a live call like this is: it lets the playground show the
+*real* effect of any filter, known to this app or not.
+
+Example request and response (shortened), reordering `lowercase` before a cluster filter named
+`english_stop`:
+
+```json
+POST /products_v7/_analyze
+{ "tokenizer": "standard", "filter": ["lowercase", "english_stop"],
+  "text": "The Shoes", "explain": true }
+```
+
+```json
+{ "detail": { "charfilters": [], "tokenizer": { "name": "standard", "tokens": [...] },
+  "tokenfilters": [
+    { "name": "lowercase", "tokens": [{ "token": "the", ... }, { "token": "shoes", ... }] },
+    { "name": "english_stop", "tokens": [{ "token": "shoes", ... }] }
+  ] } }
+```
 
 Example `_cat/indices` response (shortened):
 
@@ -60,9 +84,15 @@ An unassigned shard has `"state": "UNASSIGNED"` and `"node": null`.
 | `listIndexSummaries(request)` | `GET /_cat/indices` | `IndexSummary[]` (`name`, `health`, `docsCount`, `sizeBytes`, `isSystem`) sorted by size, descending | `forbidden` for R7.2 |
 | `getIndexDetail(request, name)` | `GET /<index>/_mapping`, `GET /<index>/_settings` | `{ fields: Field[], analyzers: Record<string, Chain>, shards: null \| ShardLayout, settings: { shards, replicas, refreshInterval } }` | each of the two calls is caught on its own; a `forbidden` on one leaves the other's data in place (R7.1) |
 | `getShardLayout(request, name)` | `GET /_cat/shards`, filtered to `name` | `ShardLayout` (`{ node: string \| null, shards: { shard: string, kind: 'primary' \| 'replica', assigned: boolean }[] }[]`) | `forbidden` for R7.1 |
+| `analyzePlaygroundStep(request, name, spec)` | `POST /<index>/_analyze` | `AnalyzeResponse` (same shape as `src/analysis/types.ts`, already used by spec 007) | surfaced as-is to the playground |
 
-(`tryAnalyzer`, built in task 3, is removed in the task that adds R9 — the field playground
-computes tokens in the browser instead of asking the cluster.)
+`spec` is `{ tokenizer: string, charFilters: string[], filters: (string \| StepDef)[], text: string }`
+— each `filters` entry is a cluster filter's real name, except the one entry a user has
+overridden with "Use a saved list" (R10), which is an inline `StepDef` instead.
+
+(`tryAnalyzer`, built in task 3, was removed when R9 first landed in favour of a browser-only
+engine; `analyzePlaygroundStep` now replaces that browser engine with real cluster calls —
+see "Decisions" for why the earlier "browser is the only way to reorder" reasoning was wrong.)
 
 `getIndexDetail` builds `Field[]` with `listFields(mappings, analysis)` and each field's analyzer
 `Chain` with `resolveAnalyzer(name, analysis)` — both already written in `src/analysis/definition.ts`
@@ -78,7 +108,7 @@ for spec 007 (mapping lab). The plain sentence per field (R4.2) and the pill lab
 | `IndexSearch` | Search box and matching-name list | `IndexSummary[]` (all names, including system) |
 | `IndexDetail` | Tabs "Fields" and "Settings" for the chosen index | `getIndexDetail`, `getShardLayout` |
 | `FieldTree` | The field tree, one row per field with its sentence, pills and a "Try it" button | `Field[]`, `Chain` map |
-| `FieldPlayground` | Full-screen per-field view: steps, per-step tokens, reorder, reset | one `Field` + its `Chain` |
+| `FieldPlayground` | Full-screen per-field view: steps, per-step tokens, reorder, reset, synonym source choice, entity-collapse switch | one `Field` + its `Chain`; `analyzePlaygroundStep`; `useWordLists()` (spec 006) for saved synonym/entity lists |
 | `ShardMap` | Nodes with their shard boxes, unassigned ones in red | `ShardLayout` |
 
 `ConnectScreen` calls `navigate('/overview')` after `connect()` resolves (R1.1). The home page's
@@ -99,28 +129,45 @@ existing "ask to connect" behaviour other screens would need, noted here as a de
 | Connection lost mid-call | Same lost-connection banner and "connect again" offer as spec 001 R4.3 (R8.2) |
 | List or detail loading | A spinner/placeholder in that part of the screen (R8.1) |
 
-## A field's analyzer playground (R9)
+## A field's analyzer playground (R9, R10)
 
 Choosing "Try it" on a field opens `FieldPlayground`, a full-screen view inside
 `ClusterOverviewScreen` (a state flag, not a new route — R9.6's "return to where you came from"
 is then just closing the view, no URL/back-button bookkeeping needed). It starts from the same
 resolved `Chain` already in `IndexDetail`'s `analyzers` map (from `getIndexDetail`/
-`resolveAnalyzer`) — no extra cluster call to open it.
+`resolveAnalyzer`), which gives the starting tokenizer name, char filter names, and filter names
+and order — but every actual run of the chain (typing text, reordering, toggling a choice) calls
+`analyzePlaygroundStep` against the real cluster (R9.4), not a browser copy:
 
-Everything inside the playground runs in the browser, reusing spec 007 (mapping lab) code:
+- `Chips` from `src/screens/MappingLab/Pieces.tsx` draws the token chips per step (R9.2) — the
+  same picture the mapping lab already uses, now fed by a real `AnalyzeResponse` instead of one
+  computed by `analyzeInBrowser`.
+- Reordering (R9.3) only touches the `filters` array's order — moving one entry earlier or later
+  by one position. Every reorder re-sends the whole `analyzePlaygroundStep` request with the new
+  order; the response shows the real effect, including filters this app does not otherwise know
+  about (`synonym_filter_hc`, a hand-configured `english_stop`, etc.).
+- "Reset to the cluster's order" (R9.5) discards the edited order and the state from R10 below,
+  and re-runs with the original `Chain`'s order and every filter referenced by name.
+- The fixed sentence (R9.7) now says plainly that trying text, reordering, and the R10 choices
+  below never change anything on the cluster — only true, since every call here is a `POST` to
+  `_analyze`, which the read-only guard already allows and which OpenSearch itself treats as a
+  read (no index, document, or setting is touched).
 
-- `analyzeInBrowser(chain, text)` from `src/analysis/engine.ts` computes the step-by-step
-  `AnalyzeResponse` (char filter output, tokenizer output, each token filter's output) for
-  whatever `Chain` is currently shown — the real one, or a reordered copy.
-- `Steps` and `Chips` from `src/screens/MappingLab/Pieces.tsx` draw the step pills and the token
-  chips per step (R9.1, R9.2) — the same pictures the mapping lab already uses.
-
-Reordering (R9.3, R9.4) only touches `chain.filters` (token filters) — moving one earlier or
-later by one position, exactly like fixing an off-by-one in a list. The screen keeps the edited
-order in its own state; "Reset to the cluster's order" (R9.5) just discards that state and falls
-back to the original `Chain` from `analyzers`. Nothing is sent to the cluster, and the heading
-"These steps run in your browser — the field's real analyzer on the cluster is not changed." is
-always shown (R9.7).
+**R10: synonym source and entity collapsing.** For each `filters` entry that is a synonym-type
+step (`def.type` is `synonym` or `synonym_graph`), and only when `useWordLists().list('synonym')`
+has at least one saved file, `FieldPlayground` shows a two-way choice next to that step's pill:
+"Use the cluster's file" (default — send the step as its real name, unchanged) or "Use a saved
+synonym list" (send an inline `{ type: 'synonym', synonyms: enabledEntries('synonym') }` in that
+array position instead — `enabledEntries` already returns the saved lines in the Solr format a
+synonym filter expects, spec 006 code, unchanged). The same `useWordLists()` check for an entity
+list (`list('entity')`) shows the "Collapse saved entities first" switch; when on, the playground
+joins a saved entity phrase in the typed text with a character the standard tokenizer will not
+split on before sending `text` to `analyzePlaygroundStep`, then — this is the part that was
+wrong the first time this was built — maps that joined token's display string back to the
+phrase's original spacing before it reaches `Chips` (R10.5), so the user sees `"ai supplychain"`
+as one token, never a delimiter invented for this feature. Internally the request still needs
+*some* non-splitting character to make the tokenizer treat the phrase as one piece; only the
+*display* is restored to the original text.
 
 ## Decisions
 
@@ -128,10 +175,18 @@ always shown (R9.7).
   (written for spec 007) instead of writing a second mapping reader, because the shapes
   (`Field`, `Chain`) and the plain-sentence logic are already correct and tested.
   Other option: write overview-specific parsing — rejected, it would duplicate spec 007's code.
-- Superseded by R9: "Try it" no longer calls the real cluster's `/_analyze` per keystroke.
-  `tryAnalyzer` (task 3) and `TryItBox` (task 5) are removed — the field playground reuses the
-  already-resolved `Chain` and the browser engine instead, which is also what makes reordering
-  possible at all (a live `/_analyze` call cannot reorder filters; see below).
+- Superseded twice. First (when R9 first landed): `tryAnalyzer` (task 3) and `TryItBox` (task 5)
+  were removed in favour of a browser-only engine (`analyzeInBrowser`), reasoning that a live
+  `/_analyze` call "cannot reorder filters". That reasoning was wrong — OpenSearch's `_analyze`
+  accepts an explicit `tokenizer`/`char_filter`/`filter` body (already used elsewhere in this
+  project, see `opensearch-api` skill reference) whose `filter` array can be given in *any* order
+  and can mix real cluster filter names with inline overrides. Second (this round):
+  `analyzeInBrowser` is dropped from the playground entirely in favour of `analyzePlaygroundStep`
+  (a real cluster call per run), because the browser engine cannot know a cluster-only filter
+  like a hand-named synonym filter at all — it would always show that step as an unknown
+  passthrough, which is exactly the bug that prompted this change. The browser engine
+  (`src/analysis/engine.ts`) stays in place for spec 007 (mapping lab), which has no real index
+  to call and must simulate; it is just no longer used by R9/R10.
 - Shard layout is a separate call (`getShardLayout`) rather than folded into `getIndexDetail`,
   because the Settings tab can be opened without needing it until that tab is actually chosen.
 - The field playground (R9) is a full-screen state flag inside `ClusterOverviewScreen`, not a
@@ -139,10 +194,21 @@ always shown (R9.7).
   shareable/bookmarkable URL — closing it is simply "go back", with no history entry to manage.
   Other option: a route like `/overview/:index/fields/:path` — rejected as unneeded complexity
   for a view that is always entered and left from the same place.
-- Filter reordering reuses the browser analysis engine (`analyzeInBrowser`) instead of calling
-  `_analyze` again per reorder, because OpenSearch's `_analyze` endpoint cannot run filters in an
-  order different from how they are defined on the index — there is no server-side way to ask
-  "what if filter 2 ran before filter 1". The browser copy is the only way to show that at all.
+- The synonym source choice (R10) is per-step (only shown on a synonym-type filter), not a
+  whole-playground setting, because a chain can have other steps unrelated to word lists at all —
+  a single on/off switch for the whole chain would be meaningless outside that one step.
+- Entity collapsing (R10.4, R10.5) is a plain string replace on the typed text before the
+  request is sent, not a real OpenSearch char filter, because there is no cluster-side filter
+  type that can join arbitrary saved multi-word phrases the way a replace built from the user's
+  exact saved list, generated fresh in the browser, can.
+- The underscore first used to join a collapsed phrase leaked into the token *display*, which
+  read as the app inventing cluster behaviour that was not real (the user asked, reasonably,
+  "why is the cluster showing me an underscore?"). The join character is still needed internally
+  — the standard tokenizer splits on whitespace, so the request sent to `_analyze` cannot contain
+  the phrase's real spaces and still come back as one token — but it is only ever a transport
+  detail now: `FieldPlayground` keeps a map from the joined form back to the original phrase and
+  rewrites any token that matches before it reaches `Chips`, so nothing the user sees uses a
+  character the real analyzer did not produce.
 
 ## Test plan
 
@@ -156,14 +222,29 @@ always shown (R9.7).
     re-calls `listIndexSummaries` and does not call it on a timer (R6.1–R6.4); a forbidden list
     call shows the whole-screen message (R7.2).
   - `ConnectScreen`: a successful `connect()` call navigates to `/overview` (R1.1).
-  - `FieldPlayground`: shows the steps and per-step tokens for a sample chain and text (R9.1,
-    R9.2); moving a filter up or down changes the shown tokens without any `fetch` call (R9.3,
-    R9.4); "Reset" restores the original order (R9.5); the browser-only sentence is always
-    present (R9.7); closing it calls back to `IndexDetail` (R9.6).
+  - `analyzePlaygroundStep`: sends `tokenizer`/`char_filter`/`filter`/`text` as given, and
+    returns the fake response unchanged (R9.4).
+  - `FieldPlayground`: shows the steps and per-step tokens for a sample chain and text, from a
+    fake `_analyze` response (R9.1, R9.2); moving a filter up or down re-sends the request with
+    the new `filter` order (R9.3, R9.4); "Reset" restores the original order and re-sends it
+    (R9.5); the fixed sentence is always present (R9.7); closing it calls back to `IndexDetail`
+    (R9.6); a synonym-type step shows the cluster-file/saved-list choice only when a synonym
+    list is saved, and picking "saved list" sends an inline `StepDef` in that filter's place
+    (R10.1–R10.3); the entity switch shows only when an entity list is saved, turning it on
+    changes the `text` sent for a phrase that matches a saved entity, and the matching token in
+    the rendered result shows the original phrase (space), not the internal join character
+    (R10.4, R10.5).
 - By hand, against the local practice cluster (`dev/`):
   - Open `/overview`, confirm the `products` index appears with correct size/health.
-  - Open its Fields tab, try a field's analyzer with real text, confirm tokens match what the
-    token playground would show for the same analyzer.
+  - Open a field that searches with a different analyzer than it was saved with (or add one to
+    the practice mapping), confirm both "Saved with" and "Searched with" show, each with correct
+    pills, including any cluster-only filter names (R4.3's fix this session).
+  - Try a field's analyzer, reorder a filter, confirm the tokens change to match what the real
+    cluster says for that order (compare against a manual `POST /<index>/_analyze` call with the
+    same body).
+  - Save a synonym list and an entity list in Word lists, then confirm the R10 choice/switch
+    appear on a synonym-using field and behave as designed — in particular, confirm the collapsed
+    entity token shows as the plain phrase, not with an underscore.
   - Open its Settings tab, confirm shard count and replica picture match `_cat/shards`.
 
 ## Coverage
@@ -197,10 +278,16 @@ always shown (R9.7).
 | R7.2 | `ClusterOverviewScreen` whole-screen message |
 | R8.1 | Loading state in `ClusterOverviewScreen` / `IndexDetail` |
 | R8.2 | Reuses spec 001 R4.3 lost-connection banner |
-| R9.1 | `FieldPlayground` opens from `FieldTree`'s "Try it", shows `Steps` + text box |
-| R9.2 | `FieldPlayground` per-step `Chips` from `analyzeInBrowser` |
+| R9.1 | `FieldPlayground` opens from `FieldTree`'s "Try it", shows step pills + text box |
+| R9.2 | `FieldPlayground` per-step `Chips` from `analyzePlaygroundStep`'s `AnalyzeResponse` |
 | R9.3 | `FieldPlayground` move-filter controls |
-| R9.4 | `FieldPlayground` re-runs `analyzeInBrowser` on the edited chain |
+| R9.4 | `FieldPlayground` re-runs `analyzePlaygroundStep` with the edited `filter` order |
 | R9.5 | `FieldPlayground` Reset button |
 | R9.6 | `FieldPlayground` close/back control |
-| R9.7 | `FieldPlayground` fixed browser-only sentence |
+| R9.7 | `FieldPlayground` fixed "nothing on the cluster changes" sentence |
+| R10.1 | `FieldPlayground` synonym-step choice, gated on `useWordLists().list('synonym')` |
+| R10.2 | `FieldPlayground` sends the synonym step by name (default) |
+| R10.3 | `FieldPlayground` sends an inline `StepDef` built from `enabledEntries('synonym')` |
+| R10.4 | `FieldPlayground` "Collapse saved entities first" switch, gated on `list('entity')` |
+| R10.5 | `FieldPlayground` text substitution before the request; display map restores original spacing before `Chips` |
+| R10.6 | No call in R10.1–R10.5 is anything but a `POST /_analyze` (read-only guard already enforces this) |

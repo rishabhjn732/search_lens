@@ -33,11 +33,47 @@ function pillsFor(chain: Chain): string[] {
   return [...chain.charFilters.map((s) => s.name), chain.tokenizer.name, ...chain.filters.map((s) => s.name)];
 }
 
+interface ChainRowProps {
+  label: string;
+  analyzerName: string;
+  chain: Chain;
+  onTry: () => void;
+}
+
+function ChainRow({ label, analyzerName, chain, onTry }: ChainRowProps) {
+  return (
+    <div className="field-chain-row">
+      <p className="field-chain-label">
+        {label}: <strong>{analyzerName}</strong>
+      </p>
+      <div className="field-row-bottom">
+        <div className="field-pills">
+          {pillsFor(chain).map((pill, i) => (
+            <span key={i} className="pill">
+              {pill}
+            </span>
+          ))}
+        </div>
+        <button type="button" className="btn ghost small try-it-button" onClick={onTry}>
+          Try it
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function FieldTree({ fields, analyzers, onTryField }: Props) {
   return (
     <ul className="field-tree">
       {fields.map((field) => {
-        const chain = field.kind === 'text' && field.indexAnalyzer ? analyzers[field.indexAnalyzer] : undefined;
+        const indexChain =
+          field.kind === 'text' && field.indexAnalyzer ? analyzers[field.indexAnalyzer] : undefined;
+        const searchChain =
+          field.kind === 'text' && field.searchAnalyzer ? analyzers[field.searchAnalyzer] : undefined;
+        // R4.3: a field saved with one analyzer can search with a different one (e.g. one
+        // that adds synonyms) — both chains are shown so neither is silently hidden.
+        const searchDiffers = searchChain && field.searchAnalyzer !== field.indexAnalyzer;
+
         return (
           <li key={field.path} className="field-row">
             {isUnreadable(field) ? (
@@ -48,22 +84,22 @@ export default function FieldTree({ fields, analyzers, onTryField }: Props) {
                   {sentence(field)}
                   {field.parent && <span className="field-of"> Extra way to save {field.parent}.</span>}
                 </p>
-                <div className="field-row-bottom">
-                  {chain && (
-                    <div className="field-pills">
-                      {pillsFor(chain).map((pill, i) => (
-                        <span key={i} className="pill">
-                          {pill}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {field.kind === 'text' && chain && (
-                    <button type="button" className="btn ghost small try-it-button" onClick={() => onTryField(field, chain)}>
-                      Try it
-                    </button>
-                  )}
-                </div>
+                {indexChain && (
+                  <ChainRow
+                    label={searchDiffers ? 'Saved with' : 'Analyzed with'}
+                    analyzerName={field.indexAnalyzer!}
+                    chain={indexChain}
+                    onTry={() => onTryField(field, indexChain)}
+                  />
+                )}
+                {searchDiffers && searchChain && (
+                  <ChainRow
+                    label="Searched with"
+                    analyzerName={field.searchAnalyzer!}
+                    chain={searchChain}
+                    onTry={() => onTryField(field, searchChain)}
+                  />
+                )}
               </div>
             )}
           </li>

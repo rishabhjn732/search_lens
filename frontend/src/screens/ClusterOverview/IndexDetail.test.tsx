@@ -114,6 +114,11 @@ describe('IndexDetail', () => {
     const request = vi.fn().mockImplementation((_method: string, path: string) => {
       if (path.endsWith('/_mapping')) return Promise.resolve(MAPPING_BODY);
       if (path.endsWith('/_settings')) return Promise.resolve(SETTINGS_BODY);
+      if (path.endsWith('/_analyze')) {
+        return Promise.resolve({
+          detail: { custom_analyzer: true, charfilters: [], tokenizer: { name: 'standard', tokens: [] }, tokenfilters: [] },
+        });
+      }
       throw new Error(`unexpected call ${path}`);
     });
     renderDetail(request);
@@ -121,6 +126,7 @@ describe('IndexDetail', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Try it' }));
     expect(screen.getByRole('dialog', { name: "Try title's analyzer" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Tokenizer: standard')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.getByText('title is text, analyzed with standard.')).toBeInTheDocument();

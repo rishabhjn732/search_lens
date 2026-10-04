@@ -14,6 +14,13 @@ export default function IndexSearch({ indexes, onOpenIndex }: Props) {
     ? indexes.filter((i) => i.name.toLowerCase().includes(text.trim().toLowerCase()))
     : [];
 
+  // R3.3: once an index is chosen, the match list closes instead of staying open over
+  // the index detail that just opened below it.
+  function choose(name: string) {
+    setText('');
+    onOpenIndex(name);
+  }
+
   return (
     <div className="index-search">
       <label htmlFor="index-search-box">Find an index by name</label>
@@ -29,7 +36,7 @@ export default function IndexSearch({ indexes, onOpenIndex }: Props) {
           <ul className="search-results">
             {matches.map((index) => (
               <li key={index.name}>
-                <button type="button" onClick={() => onOpenIndex(index.name)}>
+                <button type="button" onClick={() => choose(index.name)}>
                   {index.name}
                 </button>
               </li>

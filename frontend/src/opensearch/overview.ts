@@ -1,7 +1,7 @@
 // Cluster overview reads (spec 002). All calls go through the request function the
 // ConnectionProvider hands out, which already applies the read-only guard.
 import { listFields, resolveAnalyzer, type ChainResult } from "../analysis/definition";
-import type { Chain, Field } from "../analysis/types";
+import type { AnalyzeResponse, Chain, Field, StepDef } from "../analysis/types";
 import { ClusterError } from "./errors";
 
 export type Request = (method: string, path: string, body?: unknown) => Promise<unknown>;
@@ -103,13 +103,17 @@ export async function getIndexDetail(request: Request, name: string): Promise<In
 
   const fields = listFields(mappings, obj(analysis));
 
+  // Resolves both the save-time and search-time analyzer for every field — a field can use
+  // a different analyzer to search than it used to save (e.g. one that adds synonyms), and
+  // that search-time chain must be shown too, not just the save-time one.
   const analyzers: Record<string, Chain> = {};
   for (const field of fields) {
-    const analyzerName = field.indexAnalyzer;
-    if (!analyzerName || analyzerName in analyzers) continue;
-    const resolved: ChainResult = resolveAnalyzer(analyzerName, obj(analysis));
-    if (!("error" in resolved)) {
-      analyzers[analyzerName] = resolved;
+    for (const analyzerName of [field.indexAnalyzer, field.searchAnalyzer]) {
+      if (!analyzerName || analyzerName in analyzers) continue;
+      const resolved: ChainResult = resolveAnalyzer(analyzerName, obj(analysis));
+      if (!("error" in resolved)) {
+        analyzers[analyzerName] = resolved;
+      }
     }
   }
 
@@ -162,4 +166,31 @@ export async function getShardLayout(request: Request, name: string): Promise<Sh
   }
 
   return Array.from(byNode.entries()).map(([node, shards]) => ({ node, shards }));
+}
+
+export interface PlaygroundSpec {
+  tokenizer: string;
+  charFilters: string[];
+  // Each entry is a cluster filter's real name, except one entry that may be an inline
+  // StepDef when the user chose "Use a saved list" for that step (R10.3).
+  filters: (string | StepDef)[];
+  text: string;
+}
+
+// Runs the field playground's current chain for real (R9.4, R10): the `filter` array can be
+// given in any order and can mix named cluster filters with an inline override, so a
+// cluster-only filter (a hand-named synonym or stop filter) shows its real effect instead of
+// an unknown passthrough.
+export async function analyzePlaygroundStep(
+  request: Request,
+  name: string,
+  spec: PlaygroundSpec,
+): Promise<AnalyzeResponse> {
+  return (await request("POST", `/${name}/_analyze`, {
+    tokenizer: spec.tokenizer,
+    char_filter: spec.charFilters,
+    filter: spec.filters,
+    text: spec.text,
+    explain: true,
+  })) as AnalyzeResponse;
 }

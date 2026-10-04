@@ -225,6 +225,23 @@
   color: var(--red);
 }
 
+.field-chain-row + .field-chain-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.field-chain-label {
+  margin: 0 0 6px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.field-chain-label strong {
+  color: var(--ink);
+}
+
 .field-row-bottom {
   display: flex;
   align-items: center;
@@ -296,6 +313,37 @@
   font-weight: 400;
   padding: 8px 12px;
   border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.playground-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.playground-entity-note {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0 0 20px;
+}
+
+.playground-source {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.playground-source select {
+  font-family: var(--sans);
+  padding: 4px 8px;
+  border-radius: 6px;
   border: 1px solid var(--line);
 }
 

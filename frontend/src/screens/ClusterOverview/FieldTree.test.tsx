@@ -71,4 +71,45 @@ describe('FieldTree', () => {
     expect(rows).toHaveLength(2);
     rows.forEach((row) => expect((row as HTMLElement).style.marginLeft).toBe(''));
   });
+
+  it('shows both the save-time and search-time analyzer when they differ, each with its own Try it', () => {
+    const fields: Field[] = [
+      {
+        path: 'description.syn_hc',
+        type: 'text',
+        kind: 'text',
+        indexAnalyzer: 'standard',
+        searchAnalyzer: 'english',
+      },
+    ];
+    const onTryField = vi.fn();
+    render(
+      <FieldTree
+        fields={fields}
+        analyzers={{ standard: STANDARD, english: ENGLISH }}
+        onTryField={onTryField}
+      />,
+    );
+
+    expect(screen.getByText((_, node) => node?.textContent === 'Saved with: standard')).toBeInTheDocument();
+    expect(screen.getByText((_, node) => node?.textContent === 'Searched with: english')).toBeInTheDocument();
+    // The search chain's filters (e.g. english_stop) are now visible, not hidden.
+    expect(screen.getByText('english_stop')).toBeInTheDocument();
+
+    const tryButtons = screen.getAllByRole('button', { name: 'Try it' });
+    expect(tryButtons).toHaveLength(2);
+    fireEvent.click(tryButtons[1]);
+    expect(onTryField).toHaveBeenCalledWith(fields[0], ENGLISH);
+  });
+
+  it('shows only one chain when the field searches with the same analyzer it was saved with', () => {
+    const fields: Field[] = [
+      { path: 'title', type: 'text', kind: 'text', indexAnalyzer: 'standard', searchAnalyzer: 'standard' },
+    ];
+    render(<FieldTree fields={fields} analyzers={{ standard: STANDARD }} onTryField={vi.fn()} />);
+
+    expect(screen.queryByText((_, node) => !!node?.textContent?.startsWith('Saved with:'))).not.toBeInTheDocument();
+    expect(screen.queryByText((_, node) => !!node?.textContent?.startsWith('Searched with:'))).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Try it' })).toHaveLength(1);
+  });
 });

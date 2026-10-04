@@ -86,6 +86,7 @@ export default function IndexDetail({ indexName, refreshToken = 0 }: Props) {
           <p className="detail-forbidden">You do not have permission to see this.</p>
         ) : playground ? (
           <FieldPlayground
+            indexName={indexName}
             field={playground.field}
             chain={playground.chain}
             onClose={() => setPlayground(null)}

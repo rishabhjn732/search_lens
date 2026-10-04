@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { getIndexDetail, getShardLayout, listIndexSummaries } from "./overview";
+import { analyzePlaygroundStep, getIndexDetail, getShardLayout, listIndexSummaries } from "./overview";
 import { ClusterError } from "./errors";
 
 describe("listIndexSummaries", () => {
@@ -139,6 +139,52 @@ describe("getIndexDetail", () => {
     // "not defined" rather than crashing, so no chain is recorded for it.
     expect(detail.analyzers.product_text).toBeUndefined();
   });
+
+  it("resolves the search-time analyzer too, when a field searches with a different one", async () => {
+    const mapping = {
+      products_v7: {
+        mappings: {
+          properties: {
+            description: {
+              type: "text",
+              analyzer: "standard",
+              fields: { syn_hc: { type: "text", analyzer: "standard", search_analyzer: "english_search_syn_hc" } },
+            },
+          },
+        },
+      },
+    };
+    const settings = {
+      products_v7: {
+        settings: {
+          index: {
+            analysis: {
+              analyzer: {
+                english_search_syn_hc: {
+                  type: "custom",
+                  tokenizer: "standard",
+                  filter: ["lowercase", "synonym_filter_hc", "english_stop"],
+                },
+              },
+              filter: {
+                synonym_filter_hc: { type: "synonym", synonyms: ["ai supplychain, ai_supplychain"] },
+                english_stop: { type: "stop", stopwords: "_english_" },
+              },
+            },
+          },
+        },
+      },
+    };
+    const request = vi.fn().mockResolvedValueOnce(mapping).mockResolvedValueOnce(settings);
+
+    const detail = await getIndexDetail(request, "products_v7");
+
+    const synField = detail.fields?.find((f) => f.path === "description.syn_hc");
+    expect(synField?.searchAnalyzer).toBe("english_search_syn_hc");
+    const searchChain = detail.analyzers.english_search_syn_hc;
+    expect(searchChain).toBeDefined();
+    expect(searchChain.filters.map((s) => s.name)).toEqual(["lowercase", "synonym_filter_hc", "english_stop"]);
+  });
 });
 
 describe("getShardLayout", () => {
@@ -156,5 +202,55 @@ describe("getShardLayout", () => {
       { node: null, shards: [{ shard: "0", kind: "replica", assigned: false }] },
     ]);
     expect(request).toHaveBeenCalledWith("GET", "/_cat/shards?format=json&h=index,shard,prirep,state,node");
+  });
+});
+
+describe("analyzePlaygroundStep", () => {
+  it("sends an explicit tokenizer/char_filter/filter/text body and returns the response", async () => {
+    const response = {
+      detail: {
+        custom_analyzer: true,
+        charfilters: [],
+        tokenizer: { name: "standard", tokens: [] },
+        tokenfilters: [{ name: "english_stop", tokens: [{ token: "shoes", start_offset: 4, end_offset: 9, type: "word", position: 1 }] }],
+      },
+    };
+    const request = vi.fn().mockResolvedValue(response);
+
+    const result = await analyzePlaygroundStep(request, "products_v7", {
+      tokenizer: "standard",
+      charFilters: [],
+      filters: ["lowercase", "english_stop"],
+      text: "The Shoes",
+    });
+
+    expect(result).toEqual(response);
+    expect(request).toHaveBeenCalledWith("POST", "/products_v7/_analyze", {
+      tokenizer: "standard",
+      char_filter: [],
+      filter: ["lowercase", "english_stop"],
+      text: "The Shoes",
+      explain: true,
+    });
+  });
+
+  it("can send an inline filter definition in place of a named filter (R10.3)", async () => {
+    const request = vi.fn().mockResolvedValue({
+      detail: { custom_analyzer: true, charfilters: [], tokenizer: { name: "standard", tokens: [] }, tokenfilters: [] },
+    });
+    const inlineSynonym = { type: "synonym", synonyms: ["ai supplychain, ai_supplychain"] };
+
+    await analyzePlaygroundStep(request, "products_v7", {
+      tokenizer: "standard",
+      charFilters: [],
+      filters: ["lowercase", inlineSynonym],
+      text: "ai supplychain",
+    });
+
+    expect(request).toHaveBeenCalledWith(
+      "POST",
+      "/products_v7/_analyze",
+      expect.objectContaining({ filter: ["lowercase", inlineSynonym] }),
+    );
   });
 });

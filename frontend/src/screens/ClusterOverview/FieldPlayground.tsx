@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react';
-import { analyzeInBrowser } from '../../analysis/engine';
+import { useEffect, useRef, useState } from 'react';
+import { useConnection } from '../../components/ConnectionProvider';
+import { useWordLists } from '../../wordlists/useWordLists';
+import { analyzePlaygroundStep, type PlaygroundSpec } from '../../opensearch/overview';
 import { Chips } from '../MappingLab/Pieces';
-import type { Chain, Field, Step } from '../../analysis/types';
+import type { AnalyzeResponse, Chain, Field, Step, StepDef, Token } from '../../analysis/types';
 
 interface Props {
+  indexName: string;
   field: Field;
   chain: Chain;
   onClose: () => void;
@@ -16,15 +19,99 @@ function moveStep<T>(list: T[], from: number, to: number): T[] {
   return next;
 }
 
-// R9: a full view of one field's analyzer, with its token filters reorderable, running
-// entirely in the browser (no cluster call) — see design.md "A field's analyzer playground".
-export default function FieldPlayground({ field, chain, onClose }: Props) {
+function isSynonymStep(step: Step): boolean {
+  return step.def.type === 'synonym' || step.def.type === 'synonym_graph';
+}
+
+// Joins any saved entity phrase found in the text into one token the tokenizer will not split
+// (R10.4, R10.5). The underscore is only ever sent to the cluster — `displayMap` maps that
+// joined form back to the phrase as typed, so a token shown to the user never carries a
+// character the real analyzer did not produce.
+function collapseEntities(text: string, entities: string[]): { text: string; displayMap: Map<string, string>; joined: string[] } {
+  const joined: string[] = [];
+  const displayMap = new Map<string, string>();
+  let next = text;
+  for (const entity of entities) {
+    const phrase = entity.trim();
+    if (!phrase || !phrase.includes(' ')) continue;
+    const pattern = new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    next = next.replace(pattern, (matched) => {
+      joined.push(matched);
+      const joinedForm = matched.replace(/\s+/g, '_');
+      displayMap.set(joinedForm.toLowerCase(), matched);
+      return joinedForm;
+    });
+  }
+  return { text: next, displayMap, joined };
+}
+
+// Swaps a token's text back to its original spacing when it matches a joined entity,
+// regardless of case changes later steps may have made (e.g. a lowercase filter).
+function restoreDisplay(tokens: Token[], displayMap: Map<string, string>): Token[] {
+  if (displayMap.size === 0) return tokens;
+  return tokens.map((t) => {
+    const display = displayMap.get(t.token.toLowerCase());
+    return display ? { ...t, token: display } : t;
+  });
+}
+
+type Result = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ok'; response: AnalyzeResponse };
+
+// R9/R10: a full view of one field's analyzer. Every run (typing, reordering, Reset, a
+// source choice) asks the real cluster — see design.md "A field's analyzer playground" for
+// why a browser-only copy cannot show a cluster-only filter's real effect.
+export default function FieldPlayground({ indexName, field, chain, onClose }: Props) {
+  const { request } = useConnection();
+  const wordLists = useWordLists();
   const [text, setText] = useState('Running Shoes');
   const [filters, setFilters] = useState<Step[]>(chain.filters);
+  const [synonymSources, setSynonymSources] = useState<Record<number, 'cluster' | 'saved'>>({});
+  const [collapseEntitiesOn, setCollapseEntitiesOn] = useState(false);
+  const [result, setResult] = useState<Result>({ status: 'loading' });
   const isReordered = filters !== chain.filters;
 
-  const editedChain: Chain = useMemo(() => ({ ...chain, filters }), [chain, filters]);
-  const result = useMemo(() => analyzeInBrowser(editedChain, text), [editedChain, text]);
+  const savedSynonyms = wordLists.enabledEntries('synonym');
+  const savedEntities = wordLists.enabledEntries('entity');
+
+  const { text: sentText, displayMap, joined } = collapseEntitiesOn
+    ? collapseEntities(text, savedEntities)
+    : { text, displayMap: new Map<string, string>(), joined: [] as string[] };
+
+  function reset() {
+    setFilters(chain.filters);
+    setSynonymSources({});
+  }
+
+  const requestId = useRef(0);
+  useEffect(() => {
+    const id = ++requestId.current;
+    setResult({ status: 'loading' });
+
+    const specFilters: (string | StepDef)[] = filters.map((step, i) =>
+      isSynonymStep(step) && synonymSources[i] === 'saved'
+        ? { type: 'synonym', synonyms: savedSynonyms }
+        : step.name,
+    );
+    const spec: PlaygroundSpec = {
+      tokenizer: chain.tokenizer.name,
+      charFilters: chain.charFilters.map((s) => s.name),
+      filters: specFilters,
+      text: sentText,
+    };
+
+    analyzePlaygroundStep(request, indexName, spec)
+      .then((response) => {
+        if (requestId.current === id) setResult({ status: 'ok', response });
+      })
+      .catch((err: unknown) => {
+        if (requestId.current === id) {
+          setResult({ status: 'error', message: err instanceof Error ? err.message : 'Could not run this chain.' });
+        }
+      });
+    // savedSynonyms is derived from wordLists each render; synonymSources/filters/sentText cover
+    // every user-driven change that should re-run the request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [indexName, chain, filters, synonymSources, sentText, request]);
 
   return (
     <div className="field-playground" role="dialog" aria-label={`Try ${field.path}'s analyzer`}>
@@ -36,13 +123,28 @@ export default function FieldPlayground({ field, chain, onClose }: Props) {
       </div>
 
       <p className="playground-note">
-        These steps run in your browser. The field&apos;s real analyzer on the cluster is not changed.
+        Trying text and changing the order here never changes the field&apos;s real analyzer, filters, or any
+        other setting on the cluster.
       </p>
 
       <label className="playground-input">
         Text to try
         <input type="text" value={text} onChange={(e) => setText(e.target.value)} />
       </label>
+
+      {savedEntities.length > 0 && (
+        <label className="playground-switch">
+          <input
+            type="checkbox"
+            checked={collapseEntitiesOn}
+            onChange={(e) => setCollapseEntitiesOn(e.target.checked)}
+          />
+          Collapse saved entities first
+        </label>
+      )}
+      {collapseEntitiesOn && joined.length > 0 && (
+        <p className="playground-entity-note">Joined: {joined.join(', ')}</p>
+      )}
 
       {chain.charFilters.length > 0 && (
         <div className="playground-step">
@@ -59,7 +161,9 @@ export default function FieldPlayground({ field, chain, onClose }: Props) {
 
       <div className="playground-step">
         <h4>Tokenizer: {chain.tokenizer.name}</h4>
-        <Chips tokens={result.detail.tokenizer.tokens} />
+        {result.status === 'ok' && <Chips tokens={restoreDisplay(result.response.detail.tokenizer.tokens, displayMap)} />}
+        {result.status === 'loading' && <p className="plain">Loading…</p>}
+        {result.status === 'error' && <p className="try-it-error">{result.message}</p>}
       </div>
 
       <div className="playground-step">
@@ -68,8 +172,8 @@ export default function FieldPlayground({ field, chain, onClose }: Props) {
           <button
             type="button"
             className="btn ghost small"
-            disabled={!isReordered}
-            onClick={() => setFilters(chain.filters)}
+            disabled={!isReordered && Object.keys(synonymSources).length === 0}
+            onClick={reset}
           >
             Reset to the cluster's order
           </button>
@@ -101,7 +205,24 @@ export default function FieldPlayground({ field, chain, onClose }: Props) {
                   </button>
                 </div>
               </div>
-              <Chips tokens={result.detail.tokenfilters[i]?.tokens ?? []} />
+              {isSynonymStep(step) && savedSynonyms.length > 0 && (
+                <label className="playground-source">
+                  Source:
+                  <select
+                    value={synonymSources[i] ?? 'cluster'}
+                    onChange={(e) =>
+                      setSynonymSources((s) => ({ ...s, [i]: e.target.value as 'cluster' | 'saved' }))
+                    }
+                  >
+                    <option value="cluster">Use the cluster's file</option>
+                    <option value="saved">Use a saved synonym list</option>
+                  </select>
+                </label>
+              )}
+              {result.status === 'ok' && (
+                <Chips tokens={restoreDisplay(result.response.detail.tokenfilters[i]?.tokens ?? [], displayMap)} />
+              )}
+              {result.status === 'loading' && <p className="plain">Loading…</p>}
             </li>
           ))}
         </ul>

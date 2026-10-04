@@ -138,13 +138,43 @@ Acceptance criteria:
 - R9.2 WHEN the user types text THE SYSTEM SHALL show the tokens produced after each step, so the
   user can see where a token appeared, changed, or disappeared.
 - R9.3 THE SYSTEM SHALL let the user move a token filter earlier or later in the order.
-- R9.4 WHEN the user changes the order THE SYSTEM SHALL immediately show the tokens that order
-  would produce, without any change on the cluster.
+- R9.4 WHEN the user changes the order THE SYSTEM SHALL ask the real cluster to run that order
+  and show the tokens it produces, so that custom cluster filters (for example a synonym or
+  stop-word filter configured on the cluster) are shown correctly and not guessed at.
 - R9.5 THE SYSTEM SHALL show a way to put the order back to how the cluster actually has it.
 - R9.6 WHEN the user leaves this view THE SYSTEM SHALL return to the index detail they came from,
   with the Fields tab and any typed text in other fields unchanged.
-- R9.7 THE SYSTEM SHALL say plainly that this view computes tokens in the browser and does not
-  change the field's real analyzer on the cluster.
+- R9.7 THE SYSTEM SHALL say plainly that trying text and reordering steps here never changes the
+  field's real analyzer, filters, or any other setting on the cluster.
+
+### R10. Choose the source for a synonym step, and collapse entities
+
+As a search engineer debugging a field that uses synonyms, I want to choose between the
+cluster's real synonym file and a synonym list I saved, and to see multi-word entities joined
+into one token first, so that I can test either source without leaving the playground.
+
+A stop-word step always runs as the cluster has it configured, the same as every other step in
+the playground (R9.4) — there is no saved stop-word list to choose instead (see Out of scope).
+
+Acceptance criteria:
+
+- R10.1 WHEN a step in the playground (R9) is a synonym filter THE SYSTEM SHALL show a choice for
+  that step: "Use the cluster's file" (the default) or "Use a saved synonym list", and SHALL show
+  the second option only when a synonym list is saved in Word lists.
+- R10.2 WHEN "Use the cluster's file" is chosen THE SYSTEM SHALL ask the real cluster to run that
+  step exactly as it is configured there (same as R9.4).
+- R10.3 WHEN "Use a saved list" is chosen THE SYSTEM SHALL ask the real cluster to run that step
+  using the saved list's entries in place of the cluster's file, without changing anything on the
+  cluster.
+- R10.4 THE SYSTEM SHALL show a switch, "Collapse saved entities first", off by default, shown
+  only when an entity list is saved in Word lists.
+- R10.5 WHEN that switch is on THE SYSTEM SHALL join any of the saved entities found in the typed
+  text into one token before showing the rest of the steps, and SHALL show the joined token with
+  its original spacing (for example "ai supplychain" as one token, not "ai_supplychain") —
+  joining happens so the text is tokenized as one piece, but nothing shown to the user uses a
+  delimiter character the cluster did not produce itself.
+- R10.6 THE SYSTEM SHALL NOT change the cluster's real filters, files, or settings for any choice
+  made in R10.1 to R10.5.
 
 ## Out of scope
 
@@ -155,6 +185,15 @@ Acceptance criteria:
 - Reordering character filters or changing the tokenizer in the field playground (R9) — only
   the order of token filters can be changed there.
 - Saving a changed filter order anywhere, or sending it to the cluster.
+- Reading or showing the actual contents of a cluster-side synonym or stop-word file. OpenSearch
+  does not expose a file's contents over its API; "the cluster's file" (R10) means its configured
+  behaviour is used as-is, not that its entries are shown.
+- Editing a saved synonym or entity list from inside the playground. The user goes to Word lists
+  for that; the playground only chooses which source to use, or whether to collapse entities.
+- A saved stop-word list, and a cluster-file-vs-saved-list choice for stop-word steps. Word lists
+  (spec 006) has no stop-word list type today; a stop-word step in the playground always runs as
+  the cluster has it configured, same as any other step. Adding a stop-word list type is a later
+  spec 006 change, not part of this one.
 - Sorting or filtering the chart by anything other than size and document count.
 
 ## Open questions
