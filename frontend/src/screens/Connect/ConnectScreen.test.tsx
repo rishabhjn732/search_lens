@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConnectionProvider } from '../../components/ConnectionProvider';
 import ConnectScreen from './ConnectScreen';
 
@@ -43,6 +43,10 @@ function fillForm(url: string, username: string, password: string) {
 function submit() {
   fireEvent.click(screen.getByRole('button', { name: /connect/i }));
 }
+
+beforeEach(() => {
+  localStorage.clear();
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -200,5 +204,51 @@ describe('ConnectScreen', () => {
     submit();
 
     expect(screen.getByLabelText('Password')).toHaveValue('');
+  });
+
+  it('R6.1 remembers the URL and username, never the password, after a successful connect', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse(200, ROOT_BODY))
+        .mockResolvedValueOnce(jsonResponse(200, HEALTH_BODY)),
+    );
+    renderScreen();
+    fillForm('https://localhost:9200', 'admin', 'secret');
+    submit();
+
+    await screen.findByText('Cluster overview page');
+    expect(JSON.parse(localStorage.getItem('searchlens.connect.v1')!)).toEqual({
+      url: 'https://localhost:9200',
+      username: 'admin',
+    });
+    expect(localStorage.getItem('searchlens.connect.v1')).not.toContain('secret');
+  });
+
+  it('R6.2 pre-fills the URL and username from a remembered value, with an empty password', () => {
+    localStorage.setItem(
+      'searchlens.connect.v1',
+      JSON.stringify({ url: 'https://remembered:9200', username: 'readonly' }),
+    );
+    renderScreen();
+
+    expect(screen.getByLabelText('Cluster URL')).toHaveValue('https://remembered:9200');
+    expect(screen.getByLabelText(/^Username/)).toHaveValue('readonly');
+    expect(screen.getByLabelText('Password')).toHaveValue('');
+  });
+
+  it('R6.2 opens an empty form when nothing is remembered', () => {
+    renderScreen();
+
+    expect(screen.getByLabelText('Cluster URL')).toHaveValue('');
+    expect(screen.getByLabelText(/^Username/)).toHaveValue('');
+  });
+
+  it('R6.2 opens an empty form when the remembered value is broken JSON', () => {
+    localStorage.setItem('searchlens.connect.v1', 'not json');
+    renderScreen();
+
+    expect(screen.getByLabelText('Cluster URL')).toHaveValue('');
   });
 });

@@ -1,8 +1,12 @@
 import { Link, NavLink } from 'react-router-dom';
+import { useConnection } from './ConnectionProvider';
 import ConnectionBadge from './ConnectionBadge';
 import './AppHeader.css';
 
 export default function AppHeader() {
+  const { state } = useConnection();
+  const isConnected = state === 'connected' || state === 'lost';
+
   return (
     <header className="app-header">
       <div className="wrap">
@@ -20,6 +24,7 @@ export default function AppHeader() {
           </NavLink>
           <NavLink to="/mapping-lab">Mapping lab</NavLink>
           <NavLink to="/word-lists">Word lists</NavLink>
+          {isConnected && <NavLink to="/query-lab">Query lab</NavLink>}
           <NavLink to="/connect">Connect</NavLink>
         </nav>
         <ConnectionBadge />

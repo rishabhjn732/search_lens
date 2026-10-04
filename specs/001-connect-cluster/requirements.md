@@ -107,9 +107,25 @@ Acceptance criteria:
   with no sideways scrolling.
 - R5.8 THE SYSTEM SHALL NOT call the cluster to show the home page.
 
+### R6. Remember the address
+
+As a search engineer who comes back to the tool later, I want the URL and username I last used
+already filled in, so that I do not have to retype them every time, only the password.
+
+Acceptance criteria:
+
+- R6.1 WHEN a connect attempt succeeds THE SYSTEM SHALL remember the URL and username in browser
+  storage.
+- R6.2 WHEN the connect screen opens and a remembered URL or username exists THE SYSTEM SHALL
+  pre-fill the form with them. The password field SHALL always start empty (R2.1, R2.2 still
+  apply — only the URL and username are remembered, never the password).
+- R6.3 WHEN the user chooses Disconnect THE SYSTEM SHALL keep the remembered URL and username
+  (R4.2 still forgets the password, which was never stored).
+
 ## Out of scope
 
-- Saving connections for next time.
+- Saving more than one remembered connection, or a list of past connections. Only the most
+  recent URL and username are kept.
 - Connecting to more than one cluster at once.
 - Login methods other than username and password (AWS request signing, API keys, single sign-on).
 - More than one person using the same running tool.

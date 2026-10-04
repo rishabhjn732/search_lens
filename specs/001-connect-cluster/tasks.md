@@ -58,3 +58,12 @@ removed again by task 2. History is in `notes.md`.
 - [ ] 10. Manual check against the practice cluster (all)
   - Done when: every acceptance criterion was tried by hand (R5 by the design's "By hand, home page"
     list) and the result is written in `notes.md`
+
+- [x] 11. Remember the URL and username (R6.1, R6.2, R6.3)
+  - Files: `frontend/src/screens/Connect/ConnectScreen.tsx`, `ConnectScreen.test.tsx`
+  - Done when: a successful connect writes `{url, username}` (never the password) to one
+    `localStorage` key; a fresh mount of `ConnectScreen` pre-fills the URL and username from it
+    with the password field empty; `disconnect()` leaves the stored value in place; a missing or
+    broken value opens an empty form exactly as before this task. Tests cover: nothing stored
+    (empty form), a stored value (pre-filled, password still empty), writing on success, and that
+    `disconnect()` does not clear the stored value.

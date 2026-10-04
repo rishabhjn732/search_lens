@@ -145,6 +145,33 @@
   font-size: 0.9rem;
 }
 
+.selected-index {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.selected-index-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: var(--mono);
+}
+
+.selected-index-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.selected-index-stat {
+  color: var(--muted);
+}
+
 .index-detail {
   margin-top: 32px;
   padding-top: 24px;

@@ -78,3 +78,16 @@ export function clusterError(status: number, body: unknown): ClusterError {
     { status, body },
   );
 }
+
+// OpenSearch's own error body usually has the real "why" under error.reason (and sometimes a
+// more specific one in error.root_cause[0].reason). Screens that let the user try requests they
+// built themselves (e.g. the field playground) should show this, not just the status code.
+export function clusterErrorReason(err: ClusterError): string | undefined {
+  const body = err.body;
+  if (typeof body !== "object" || body === null || !("error" in body)) return undefined;
+  const errorPart = (body as { error: unknown }).error;
+  if (typeof errorPart !== "object" || errorPart === null) return undefined;
+  const e = errorPart as { reason?: unknown; root_cause?: { reason?: unknown }[] };
+  const reason = e.root_cause?.[0]?.reason ?? e.reason;
+  return typeof reason === "string" ? reason : undefined;
+}

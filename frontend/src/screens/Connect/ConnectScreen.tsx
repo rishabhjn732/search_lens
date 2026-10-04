@@ -4,11 +4,29 @@ import { useConnection } from '../../components/ConnectionProvider';
 import { ClusterError } from '../../opensearch/errors';
 import './connect.css';
 
+// R6: only the URL and username are remembered, never the password (R2.1, R2.2 still apply).
+const REMEMBERED_KEY = 'searchlens.connect.v1';
+
+function readRemembered(): { url: string; username: string } {
+  try {
+    const raw = localStorage.getItem(REMEMBERED_KEY);
+    if (!raw) return { url: '', username: '' };
+    const parsed = JSON.parse(raw);
+    return {
+      url: typeof parsed.url === 'string' ? parsed.url : '',
+      username: typeof parsed.username === 'string' ? parsed.username : '',
+    };
+  } catch {
+    return { url: '', username: '' };
+  }
+}
+
 export default function ConnectScreen() {
   const { state, connect } = useConnection();
   const navigate = useNavigate();
-  const [url, setUrl] = useState('');
-  const [username, setUsername] = useState('');
+  const [{ url: initialUrl, username: initialUsername }] = useState(readRemembered);
+  const [url, setUrl] = useState(initialUrl);
+  const [username, setUsername] = useState(initialUsername);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<ClusterError | null>(null);
 
@@ -31,6 +49,8 @@ export default function ConnectScreen() {
     setError(null);
     try {
       await connect(details);
+      // R6.1: remembered on success only, and never includes the password.
+      localStorage.setItem(REMEMBERED_KEY, JSON.stringify({ url, username }));
       // R1.1: a successful connect goes straight to the cluster overview.
       navigate('/overview');
     } catch (err) {

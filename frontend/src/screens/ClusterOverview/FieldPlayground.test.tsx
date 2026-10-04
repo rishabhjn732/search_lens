@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveAnalyzer } from '../../analysis/definition';
 import type { Field } from '../../analysis/types';
 import { ConnectionProvider, useConnection } from '../../components/ConnectionProvider';
+import { clusterError } from '../../opensearch/errors';
 import { STORAGE_KEY } from '../../wordlists/store';
 import { resetWordListStoreForTests } from '../../wordlists/useWordLists';
 import FieldPlayground from './FieldPlayground';
@@ -212,5 +213,18 @@ describe('FieldPlayground', () => {
     renderPlayground(request, chainWith(['lowercase']));
     await waitFor(() => expect(request).toHaveBeenCalled());
     expect(screen.queryByLabelText('Collapse saved entities first')).not.toBeInTheDocument();
+  });
+
+  it('shows the cluster\'s real reason for a failed run, not just the status code', async () => {
+    const request = vi.fn().mockRejectedValue(
+      clusterError(400, {
+        error: { type: 'illegal_argument_exception', reason: 'The filter order given is not valid for this chain.' },
+      }),
+    );
+    renderPlayground(request);
+
+    await waitFor(() =>
+      expect(screen.getByText('The filter order given is not valid for this chain.')).toBeInTheDocument(),
+    );
   });
 });

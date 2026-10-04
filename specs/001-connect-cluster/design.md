@@ -10,7 +10,9 @@ Search Lens runs only in the browser. There is no backend (decided 2026-10-03, s
 The connect screen gives the URL, username and password to `ConnectionProvider`. It creates a
 cluster client and makes two calls straight from the browser to the cluster: one for the version
 and name, one for the health. If both work, the client stays in page memory and every screen uses
-it. Nothing is written to browser storage, so a reload means connecting again (R2.4).
+it. The password is never written to browser storage, so a reload always means typing it again
+(R2.4) — the URL and username are the one exception (R6), remembered so the user does not retype
+the whole form each time.
 
 Every call goes through one function, `request(method, path, body)`. It first asks the read-only
 guard. A refused call is never sent (R3.1). An allowed call gets the login header and a 5 second
@@ -70,8 +72,21 @@ Some practice and local clusters have no security plugin, so there is nothing to
 - The connect form's password field is cleared as soon as Connect is chosen.
 - Calls use `credentials: "omit"` and send the header only to URLs that start with the URL the user
   entered (R2.3). `request` takes a path, not a full URL, so it cannot be pointed elsewhere.
-- Nothing is written to `localStorage`, `sessionStorage`, cookies or IndexedDB, and nothing is
-  logged to the console.
+- Nothing about the password is written to `localStorage`, `sessionStorage`, cookies or
+  IndexedDB, and nothing is logged to the console. (The URL and username are written to
+  `localStorage` — see "Remembering the URL and username" (R6) below — but never the password.)
+
+### Remembering the URL and username (R6)
+
+- On a successful `connect()`, `ConnectScreen` writes `{ url, username }` as JSON to one
+  `localStorage` key (`searchlens.connect.v1`). Nothing else goes in that key — no password, no
+  connection history, no cluster facts.
+- On mount, `ConnectScreen` reads that key once and uses it as the initial `url`/`username`
+  state, so the form opens pre-filled. The password field's initial state is always `''` (R6.2).
+- `disconnect()` does not touch this key (R6.3) — it only clears the in-memory client and
+  password, which is all it ever held.
+- A broken or missing value (first visit, or someone hand-edited `localStorage`) is treated the
+  same as "nothing remembered": the form opens empty, same as today.
 
 ### Mapping problems to errors
 
@@ -170,6 +185,10 @@ packages, so the tool works without internet.
   and links like `/connect` should work. Other option: one state value in `App` that picks the screen.
 - Fonts come from npm packages (`@fontsource/...`), because the tool may run on a network with no
   internet. Other option: the Google Fonts link the prototype uses.
+- Only the URL and username are remembered (R6), never the password, keeping R2's guarantee
+  intact — "nothing is written to browser storage" now means "nothing *about the password*".
+  One plain `localStorage` key, not a list of past connections, because remembering more than
+  the most recent one was explicitly out of scope when this was raised.
 
 ## Test plan
 
@@ -191,6 +210,10 @@ All tests use a fake `fetch` (`vi.stubGlobal`). No test calls a real cluster.
 - Home page: all parts of R5.1 are on the page; the button and the Connect card lead to
   `/connect`; the four other cards say "Coming soon" and are not links; the logo leads to `/`;
   the demo shows "run", "shoe" and the score from `demoData.ts`; no `fetch` call happens.
+- Remembering: a successful connect writes `{url, username}` (never the password) to
+  `localStorage`; a fresh mount of `ConnectScreen` reads it back and pre-fills the form with an
+  empty password; `disconnect()` leaves the stored value alone; broken/missing storage opens an
+  empty form, same as before R6 existed.
 - By hand: connect to the practice cluster; with a wrong password; with the cluster stopped;
   before accepting the certificate; with CORS turned off.
 - By hand, home page: compare with the prototype; turn on "reduce motion" in the system settings
@@ -227,3 +250,6 @@ All tests use a fake `fetch` (`vi.stubGlobal`). No test calls a real cluster.
 | R5.6 | `AppHeader` logo link to `/` |
 | R5.7 | one-column CSS below 900 pixels |
 | R5.8 | home page uses fixed data only; test that no `fetch` happens |
+| R6.1 | `ConnectScreen` writes `{url, username}` to `localStorage` on successful connect |
+| R6.2 | `ConnectScreen` reads `localStorage` on mount to pre-fill `url`/`username`; password starts empty |
+| R6.3 | `disconnect()` does not touch the remembered-address `localStorage` key |

@@ -76,6 +76,9 @@ describe('ConnectionBadge', () => {
   it('R4.2 Disconnect forgets the connection and goes to /connect', async () => {
     createClusterClientMock.mockReturnValue({ connect: vi.fn().mockResolvedValue(FACTS), request: vi.fn() });
     renderBadge();
+    // R6.3: a remembered URL/username (set by ConnectScreen on an earlier connect) is not
+    // something Disconnect should touch — it never held the password to begin with.
+    localStorage.setItem('searchlens.connect.v1', JSON.stringify({ url: DETAILS.url, username: DETAILS.username }));
 
     await act(async () => {
       fireEvent.click(screen.getByText('test-connect'));
@@ -86,6 +89,7 @@ describe('ConnectionBadge', () => {
 
     expect(screen.getByText('Connect screen')).toBeInTheDocument();
     expect(screen.queryByText('docker-cluster')).not.toBeInTheDocument();
+    expect(localStorage.getItem('searchlens.connect.v1')).not.toBeNull();
   });
 
   it('R4.3 shows "Connection lost" and "Connect again" when a health check cannot reach the cluster', async () => {

@@ -3,14 +3,14 @@ import type { IndexSummary } from '../../opensearch/overview';
 
 type SortBy = 'size' | 'docs';
 
-const HEALTH_COLOR: Record<string, string> = {
+export const HEALTH_COLOR: Record<string, string> = {
   green: 'var(--green)',
   yellow: 'var(--yellow)',
   red: 'var(--red)',
 };
 
 // Human-readable size, close enough for a chart label (R2.1).
-function formatBytes(n: number): string {
+export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   const units = ['KB', 'MB', 'GB', 'TB'];
   let value = n / 1024;

@@ -195,3 +195,31 @@ A new session reads this file to continue the work. Newest entry at the bottom.
     using `dev/`) and task 10 (manual check in a real browser — now against their own cluster,
     possibly with no login at all).
   - Nothing has been committed to git yet.
+
+## Task 11: Remember the URL and username (added mid-spec-002-session)
+
+- The user asked (while using spec 002's overview screen) for auto-connect from a saved password.
+  That was refused outright — it directly breaks R2.1/R2.2/R2.4, which exist specifically so this
+  tool stays safe to point at a real cluster. Offered the lesser version instead (remember URL
+  and username only, never the password) and the user agreed. R6 was added to this spec's
+  requirements.md (moving "Saving connections for next time" out of Out of scope, since that bullet
+  no longer described reality), design.md got a new subsection, and this task was added and built.
+- Built: `ConnectScreen.tsx` reads one `localStorage` key (`searchlens.connect.v1`, a plain
+  `{url, username}` JSON object) once on mount via `useState(readRemembered)`, and writes to it
+  only right after `connect()` succeeds — never on every keystroke, never including the password.
+  `readRemembered()` treats a missing key or broken JSON the same as "nothing remembered" (empty
+  form), so there's no new failure mode for a first-time user or anyone with old/foreign data in
+  that key.
+  `disconnect()` (`ConnectionBadge.tsx`, `ConnectionProvider.tsx`) was not touched — it never held
+  anything from this key, so there was nothing to change there; added a test confirming the key
+  survives a Disconnect rather than assuming it.
+- Decisions: one `localStorage` key holding the single most recent `{url, username}`, not a list
+  of past connections — matches the out-of-scope note and keeps this a small addition rather than
+  a new "connection history" feature.
+- Tests: 5 new in `ConnectScreen.test.tsx` (remembers on success, password never in storage,
+  pre-fills from a stored value, empty form when nothing stored, empty form when storage is
+  broken JSON), 1 new assertion added to `ConnectionBadge.test.tsx`'s existing Disconnect test.
+  Full suite 324/324 pass (this count includes spec 002's cluster-overview work from the same
+  session); `npm run build` passes.
+- For the next session: unrelated to this task, tasks 9 and 10 are still the ones on hold,
+  needing the user's own machine/browser.

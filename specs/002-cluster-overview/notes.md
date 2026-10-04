@@ -433,3 +433,22 @@ immediately ("why you Remove... please do it carefully").
 - For the next session: task 11 (manual check) is still the only one left; the entity switch and
   its display fix are now, for a second time, something to specifically verify by hand against
   the real cluster before calling this spec finished.
+
+## User report: reordering synonym_filter_hc before lowercase throws a 400
+
+Not yet diagnosed — the cluster's actual reason was invisible, which blocked diagnosis. Fixed
+that first: `ClusterError` already carried the full OpenSearch error body (`clusterError()` in
+`errors.ts` always has), but nothing ever read it; every screen just showed
+`"The cluster answered with error <status>."`. Added `clusterErrorReason(err)` (`errors.ts`),
+reading `body.error.root_cause[0].reason` or `body.error.reason`, and wired it into
+`FieldPlayground`'s catch handler so a failed run shows the cluster's real sentence instead of a
+bare status code. This is a generically useful fix (any screen could use `clusterErrorReason`),
+but only `FieldPlayground` was changed, since it is the one place in spec 002 where the user
+builds a request that can legitimately be invalid on purpose.
+Tests: `errors.test.ts` (new) for the extraction logic (prefers `root_cause[0].reason`, falls
+back to `error.reason`, undefined when absent); `FieldPlayground.test.tsx` gained a test that a
+rejected `analyzePlaygroundStep` call shows the reason text, not a generic message.
+Still waiting on the user to retry and report the actual reason text now shown, before guessing
+further at a fix — a likely cause (not confirmed) is that OpenSearch restricts where a synonym
+filter can sit relative to other filters in some configurations, but this needs the real error
+text to confirm rather than a guess.

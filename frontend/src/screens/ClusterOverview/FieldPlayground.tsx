@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useConnection } from '../../components/ConnectionProvider';
 import { useWordLists } from '../../wordlists/useWordLists';
 import { analyzePlaygroundStep, type PlaygroundSpec } from '../../opensearch/overview';
+import { ClusterError, clusterErrorReason } from '../../opensearch/errors';
 import { Chips } from '../MappingLab/Pieces';
 import type { AnalyzeResponse, Chain, Field, Step, StepDef, Token } from '../../analysis/types';
 
@@ -104,9 +105,13 @@ export default function FieldPlayground({ indexName, field, chain, onClose }: Pr
         if (requestId.current === id) setResult({ status: 'ok', response });
       })
       .catch((err: unknown) => {
-        if (requestId.current === id) {
-          setResult({ status: 'error', message: err instanceof Error ? err.message : 'Could not run this chain.' });
-        }
+        if (requestId.current !== id) return;
+        // The cluster's own reason (e.g. why a filter order was rejected) is far more useful
+        // here than a bare status code — this screen exists to let the user try things that
+        // might be invalid, so showing *why* matters more than almost anywhere else in the app.
+        const reason = err instanceof ClusterError ? clusterErrorReason(err) : undefined;
+        const message = reason ?? (err instanceof Error ? err.message : 'Could not run this chain.');
+        setResult({ status: 'error', message });
       });
     // savedSynonyms is derived from wordLists each render; synonymSources/filters/sentText cover
     // every user-driven change that should re-run the request.

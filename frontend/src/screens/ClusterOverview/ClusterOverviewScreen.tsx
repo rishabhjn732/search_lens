@@ -6,6 +6,7 @@ import { listIndexSummaries, type IndexSummary } from '../../opensearch/overview
 import IndexChart from './IndexChart';
 import IndexDetail from './IndexDetail';
 import IndexSearch from './IndexSearch';
+import SelectedIndexSummary from './SelectedIndexSummary';
 import './overview.css';
 
 type Load = { status: 'loading' } | { status: 'error'; error: ClusterError } | { status: 'ok'; indexes: IndexSummary[] };
@@ -61,10 +62,17 @@ export default function ClusterOverviewScreen() {
       )}
 
       {load.status === 'ok' && (
-        <>
-          <IndexSearch indexes={load.indexes} onOpenIndex={setOpenIndexName} />
-          <IndexChart indexes={load.indexes} onOpenIndex={setOpenIndexName} />
-        </>
+        openIndexName ? (
+          <SelectedIndexSummary
+            index={load.indexes.find((i) => i.name === openIndexName) ?? { name: openIndexName, health: '?', docsCount: 0, sizeBytes: 0, isSystem: false }}
+            onBack={() => setOpenIndexName(null)}
+          />
+        ) : (
+          <>
+            <IndexSearch indexes={load.indexes} onOpenIndex={setOpenIndexName} />
+            <IndexChart indexes={load.indexes} onOpenIndex={setOpenIndexName} />
+          </>
+        )
       )}
 
       {openIndexName && <IndexDetail indexName={openIndexName} refreshToken={refreshToken} />}
