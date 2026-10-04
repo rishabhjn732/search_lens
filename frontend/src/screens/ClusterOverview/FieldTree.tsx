@@ -1,4 +1,3 @@
-import { plainStep } from '../../analysis/compare';
 import type { Chain, Field } from '../../analysis/types';
 
 interface Props {
@@ -28,27 +27,27 @@ function sentence(field: Field): string {
   return `${field.path} is ${field.type}.`;
 }
 
+// R4.3: the pills are the analyzer's real step names (as configured on the cluster, e.g.
+// "lowercase", "english_stop"), not a plain-English description of what each one does.
 function pillsFor(chain: Chain): string[] {
-  return [
-    ...chain.charFilters.map((s) => plainStep(s, false)),
-    plainStep(chain.tokenizer, true),
-    ...chain.filters.map((s) => plainStep(s, false)),
-  ];
+  return [...chain.charFilters.map((s) => s.name), chain.tokenizer.name, ...chain.filters.map((s) => s.name)];
 }
 
 export default function FieldTree({ fields, analyzers, onTryField }: Props) {
   return (
     <ul className="field-tree">
       {fields.map((field) => {
-        const depth = field.path.split('.').length - 1;
         const chain = field.kind === 'text' && field.indexAnalyzer ? analyzers[field.indexAnalyzer] : undefined;
         return (
-          <li key={field.path} className="field-row" style={{ marginLeft: `${depth * 24}px` }}>
+          <li key={field.path} className="field-row">
             {isUnreadable(field) ? (
               <p className="field-unreadable">This field could not be read.</p>
             ) : (
               <div className="field-row-inner">
-                <p className="field-sentence">{sentence(field)}</p>
+                <p className="field-sentence" style={{ paddingLeft: `${(field.path.split('.').length - 1) * 20}px` }}>
+                  {sentence(field)}
+                  {field.parent && <span className="field-of"> Extra way to save {field.parent}.</span>}
+                </p>
                 <div className="field-row-bottom">
                   {chain && (
                     <div className="field-pills">

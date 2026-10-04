@@ -109,4 +109,20 @@ describe('IndexDetail', () => {
 
     await waitFor(() => expect(screen.getAllByText('You do not have permission to see this.').length).toBeGreaterThan(0));
   });
+
+  it('Try it opens the field playground, and Close returns to the field tree (R9.1, R9.6)', async () => {
+    const request = vi.fn().mockImplementation((_method: string, path: string) => {
+      if (path.endsWith('/_mapping')) return Promise.resolve(MAPPING_BODY);
+      if (path.endsWith('/_settings')) return Promise.resolve(SETTINGS_BODY);
+      throw new Error(`unexpected call ${path}`);
+    });
+    renderDetail(request);
+    await waitFor(() => expect(screen.getByText('title is text, analyzed with standard.')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try it' }));
+    expect(screen.getByRole('dialog', { name: "Try title's analyzer" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.getByText('title is text, analyzed with standard.')).toBeInTheDocument();
+  });
 });

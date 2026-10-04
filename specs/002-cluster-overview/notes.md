@@ -181,3 +181,98 @@ A new session reads this file to continue the work. Newest entry at the bottom.
 - For the next session: task 9 is the only one left — the manual check against the `dev/`
   practice cluster, confirming all of requirements.md by hand and writing the result into this
   file.
+
+## User feedback, mid-session: three fixes requested after trying the app
+
+The user tried the built screen and asked for three things: (1) Fields tab alignment/UI was not
+good, (2) going to `/connect` while already connected should show the overview instead of the
+form again, (3) "Try it" should open a full view with the field's analyzer steps, letting the
+user reorder filters and see the effect — essentially a per-field token playground. (1) and (2)
+were small fixes to already-approved work; (3) was new scope, so `requirements.md` gained R9
+(and R4.2/R4.4 were reworded) before any code, with the user's explicit OK to add it to spec 002
+rather than defer it to spec 003 (token playground). `design.md` and `tasks.md` (new task 9,
+renumbering the manual check to 10) were updated the same way, then this task was built.
+
+## Task 9: A field's analyzer playground (also covers the two smaller fixes)
+
+- Built: `FieldPlayground.tsx` — a full view inside `IndexDetail`'s Fields tab (not a route,
+  per design.md's decision) showing: the field's character filters as plain pills, its
+  tokenizer's tokens, and its token filters as a reorderable list, each with the tokens at that
+  point. Everything runs through `analyzeInBrowser` from `src/analysis/engine.ts` (built for
+  spec 007) on whatever `Chain` is currently shown — a `Steps`/`Chips`-style view reused from
+  `src/screens/MappingLab/Pieces.tsx` (only `Chips`; `Steps` wasn't quite the shape needed here
+  since each filter needed its own move buttons, so the filter list is custom markup using the
+  same `pill`/`chips` CSS classes). Moving a filter swaps it with its neighbour; "Reset to the
+  cluster's order" discards the edit and falls back to the original `chain.filters` reference
+  (compared by `!==` to know whether Reset should be enabled — no extra "is dirty" flag needed).
+  `FieldTree` now has a "Try it" button (not an inline box) that hands its field and resolved
+  `Chain` up to `IndexDetail`, which renders `FieldPlayground` in place of the field tree while
+  open, and switches back on Close.
+  `tryAnalyzer` (task 3) and `TryItBox` (task 5) are deleted — R9 replaced both; nothing else
+  referenced them.
+  Field sentences in `FieldTree` now always use the field's full `path` (e.g. "address.city is
+  keyword"), not the last segment, fixing the "proper field names" complaint.
+  `ConnectScreen` now redirects to `/overview` immediately if `state === 'connected'` (e.g. the
+  user types `/connect` in the URL bar, or clicks something that routes there, while already
+  connected) — this also made the old "connected: show cluster facts" block in `ConnectScreen`
+  genuinely unreachable, so it was deleted rather than left as dead code (unlike the earlier,
+  similar case in task 8, where deleting it would have touched spec 001's requirement before
+  this redirect made it provably unreachable).
+  The Fields tab's alignment was reworked: each field is now a bordered card
+  (`.field-row` + `.field-row-inner`) with the sentence on its own line and a bottom row holding
+  the pills (left) and the Try it button (right, `margin-left: auto`), instead of the previous
+  loosely-spaced stack.
+- Decisions: reordering is restricted to token filters only (not char filters or the tokenizer),
+  matching R9's own "out of scope" note — `analyzeInBrowser` always needs exactly one tokenizer
+  and treats char filters as a fixed pre-step, so reordering either would need a different chain
+  shape, not just a different array order.
+- For the next session: task 10 (renumbered from 9) is the only one left — the manual check
+  against the `dev/` practice cluster. This is also the first time anything in this spec will run
+  against a real OpenSearch; the field playground in particular (R9) has only been checked with
+  hand-built `Chain`s in tests, never a chain read from a real index's real settings.
+
+## User feedback, same session: two more fixes after a screenshot
+
+The user shared a screenshot of the Fields tab: (1) a nested field (`brand.keyword`) looked
+unaligned next to its siblings, (2) the pills showed plain-English descriptions ("cut into
+words", "small letters") instead of real analyzer step names. Both are refinements of R4.2/R4.3,
+no new requirement needed.
+
+- Pills: `FieldTree.tsx`'s `pillsFor` now reads `step.name` directly instead of calling
+  `plainStep` (the description helper from `src/analysis/compare.ts`, still used elsewhere for
+  the mapping lab's sentences). For a built-in analyzer these names are the ones
+  `src/analysis/definition.ts`'s `builtinAnalyzer()` already assigns (e.g. English's
+  `english_possessive_stemmer`, `english_stop`, `english_stemmer` — the real documented
+  component names), so no change was needed there.
+- Alignment: the nested-field `<li>` no longer only gets `margin-left` (which, next to its
+  siblings in a flex column, left its right edge short of theirs — the "not aligned" look).
+  It now also gets `width: calc(100% - <indent>px)`, and a `.field-row-nested` class adds a
+  left accent border instead of relying on indentation alone to show nesting, so the right edge
+  lines up with every other card regardless of depth.
+- For the next session: task 10 (the manual check) is still the only thing left. When doing it,
+  specifically look at a multi-field (like `brand.keyword`) and an `english`-analyzed field in
+  the real practice cluster, since both were the direct subject of this feedback round.
+
+## User feedback, same session: alignment fix did not fix it
+
+A screenshot showed the pill-name fix worked, but `brand.keyword`'s card was still visibly off —
+the `margin-left`/`width: calc(...)` approach from the previous round kept the right edge lined
+up but the card was still indented and boxed differently from its siblings, which still read as
+"wrong" to the user. Looked at `src/screens/MappingLab/FieldCards.tsx` (spec 007) for how the
+mapping lab already handles this exact situation — multi-fields (`field.parent` set) there are
+not indented at all; they get a plain note: `extra way to save {field.parent}`. Copied that
+pattern instead of inventing another indentation scheme:
+
+- `FieldTree.tsx` no longer shifts or narrows the `<li>` at all — every card is the same full
+  width. A multi-field's sentence gets a muted trailing note, "Extra way to save brand.", using
+  `field.parent` (already set by `listFields` for multi-fields, spec 007 code, untouched here).
+- True nested/object children (no `field.parent`, e.g. `address.city` under an `address` object)
+  still get a small `padding-left` on the sentence text only — not on the row/box itself — so
+  `address.city` reads visually under `address` without any card narrowing or margin tricks.
+- Removed the `.field-row-nested` left-border CSS from the previous attempt; added `.field-of`
+  for the new muted note.
+- For the next session: task 10 (manual check) is the only thing left. The user has now given
+  feedback on this exact screen twice in one session — worth specifically re-checking
+  `brand.keyword` (a multi-field) and a true nested field (e.g. inside an `address`-shaped
+  mapping, if the practice data has one) side by side with their siblings before calling this
+  done.

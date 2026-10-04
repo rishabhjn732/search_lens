@@ -1,7 +1,7 @@
 // Cluster overview reads (spec 002). All calls go through the request function the
 // ConnectionProvider hands out, which already applies the read-only guard.
 import { listFields, resolveAnalyzer, type ChainResult } from "../analysis/definition";
-import type { Chain, Field, Token } from "../analysis/types";
+import type { Chain, Field } from "../analysis/types";
 import { ClusterError } from "./errors";
 
 export type Request = (method: string, path: string, body?: unknown) => Promise<unknown>;
@@ -162,17 +162,4 @@ export async function getShardLayout(request: Request, name: string): Promise<Sh
   }
 
   return Array.from(byNode.entries()).map(([node, shards]) => ({ node, shards }));
-}
-
-// Tries one field's analyzer against typed text on the real cluster (R4.4).
-export async function tryAnalyzer(
-  request: Request,
-  name: string,
-  field: string,
-  text: string,
-): Promise<Token[]> {
-  const body = (await request("POST", `/${name}/_analyze`, { field, text })) as {
-    tokens: Token[];
-  };
-  return body.tokens;
 }

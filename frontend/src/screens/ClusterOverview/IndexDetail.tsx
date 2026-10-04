@@ -27,6 +27,7 @@ export default function IndexDetail({ indexName, refreshToken = 0 }: Props) {
   const [tab, setTab] = useState<Tab>('fields');
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [shardLoad, setShardLoad] = useState<ShardLoad | null>(null);
+  const [playground, setPlayground] = useState<Playground | null>(null);
   const shardLoadStarted = useRef(false);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function IndexDetail({ indexName, refreshToken = 0 }: Props) {
   useEffect(() => {
     shardLoadStarted.current = false;
     setShardLoad(null);
+    setPlayground(null);
   }, [indexName, refreshToken]);
 
   // The shard picture is only asked for once the Settings tab is actually opened, and
@@ -82,11 +84,17 @@ export default function IndexDetail({ indexName, refreshToken = 0 }: Props) {
       {load.status === 'ok' && tab === 'fields' && (
         load.detail.fieldsError ? (
           <p className="detail-forbidden">You do not have permission to see this.</p>
+        ) : playground ? (
+          <FieldPlayground
+            field={playground.field}
+            chain={playground.chain}
+            onClose={() => setPlayground(null)}
+          />
         ) : (
           <FieldTree
             fields={load.detail.fields ?? []}
             analyzers={load.detail.analyzers}
-            onTry={(fieldPath, text) => tryAnalyzer(request, indexName, fieldPath, text)}
+            onTryField={(field, chain) => setPlayground({ field, chain })}
           />
         )
       )}

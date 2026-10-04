@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { getIndexDetail, getShardLayout, listIndexSummaries, tryAnalyzer } from "./overview";
+import { getIndexDetail, getShardLayout, listIndexSummaries } from "./overview";
 import { ClusterError } from "./errors";
 
 describe("listIndexSummaries", () => {
@@ -156,18 +156,5 @@ describe("getShardLayout", () => {
       { node: null, shards: [{ shard: "0", kind: "replica", assigned: false }] },
     ]);
     expect(request).toHaveBeenCalledWith("GET", "/_cat/shards?format=json&h=index,shard,prirep,state,node");
-  });
-});
-
-describe("tryAnalyzer", () => {
-  it("posts the field and text to _analyze and returns the tokens", async () => {
-    const request = vi.fn().mockResolvedValue({
-      tokens: [{ token: "run", start_offset: 0, end_offset: 7, type: "<ALPHANUM>", position: 0 }],
-    });
-
-    const tokens = await tryAnalyzer(request, "products_v7", "title", "Running Shoes");
-
-    expect(tokens).toEqual([{ token: "run", start_offset: 0, end_offset: 7, type: "<ALPHANUM>", position: 0 }]);
-    expect(request).toHaveBeenCalledWith("POST", "/products_v7/_analyze", { field: "title", text: "Running Shoes" });
   });
 });

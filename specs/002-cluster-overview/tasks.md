@@ -69,7 +69,7 @@ Do the tasks in order. One task per `/spec-implement` run.
     `/connect` when not connected; a lost connection on the overview screen shows the same
     lost-connection banner and reconnect offer as spec 001 R4.3.
 
-- [ ] 9. A field's analyzer playground (R4.2, R4.4, R9.1, R9.2, R9.3, R9.4, R9.5, R9.6, R9.7)
+- [x] 9. A field's analyzer playground (R4.2, R4.4, R9.1, R9.2, R9.3, R9.4, R9.5, R9.6, R9.7)
   - Files: `frontend/src/screens/ClusterOverview/FieldPlayground.tsx`,
     `frontend/src/screens/ClusterOverview/FieldPlayground.test.tsx`,
     `frontend/src/screens/ClusterOverview/FieldTree.tsx` (+ test, "Try it" opens the playground

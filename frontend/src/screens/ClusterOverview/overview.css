@@ -190,28 +190,54 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .field-row {
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.field-of {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+
+.field-row-inner {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .field-sentence {
-  margin: 0 0 6px;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.95rem;
 }
 
 .field-unreadable {
   margin: 0;
+  padding: 12px 14px;
   color: var(--red);
+}
+
+.field-row-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .field-pills {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  flex: 1;
 }
 
 .pill {
@@ -221,40 +247,123 @@
   color: var(--blue);
   font-size: 0.82rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
-.try-it-box {
+.try-it-button {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.field-playground {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.playground-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 4px;
 }
 
-.try-it-box input {
+.playground-head h3 {
+  margin: 0;
+  font-family: var(--mono);
+}
+
+.playground-note {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0 0 16px;
+}
+
+.playground-input {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+  max-width: 360px;
+}
+
+.playground-input input {
   font-family: var(--sans);
-  padding: 6px 10px;
+  font-weight: 400;
+  padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid var(--line);
 }
 
-.try-it-error {
-  color: var(--red);
-  margin: 0;
+.playground-step {
+  margin-bottom: 20px;
 }
 
-.try-it-tokens {
+.playground-step h4 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.playground-step-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.playground-filters {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.playground-filter {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.playground-filter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.move-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.move-buttons button {
+  padding: 4px 10px;
+}
+
+.chips {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  margin: 0;
 }
 
-.try-it-tokens .token {
+.chips .chip {
   padding: 3px 10px;
   border-radius: 6px;
   background: var(--yellow-bg);
   color: var(--yellow);
   font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+.chips .none {
+  color: var(--muted);
   font-size: 0.85rem;
 }
 
